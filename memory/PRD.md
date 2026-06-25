@@ -967,3 +967,10 @@ corner) — no explicit "X" close.
 - `php-version/includes/functions.php`: read `?mv_cc=XX` to set storefront currency when router.php isn't used (Apache).
 - `php-version/router.php`: added extensionless→`.php` resolver so clean URLs (e.g. `/ca/shop`) work in preview, matching production.
 **Verified:** on real Apache (temp install) `/ca/`,`/uk/`,`/au/`,`/eu/`→200, `/us/`→301; on preview all regional + clean URLs 200, genuine 404s preserved. CAD/GBP/AUD localize correctly.
+
+---
+## EU storefront + hreflang + full QA (2026-06-25)
+- **EU/Europe enabled:** `regions.EU.active=1` (updated live DB, `database.sql` seed, and idempotent `start.sh` migration). /eu/ now shows EUR pricing and Europe appears in the country switcher.
+- **hreflang:** already implemented in `includes/header.php` (en-US/en-GB/en-CA/en-AU/en + x-default) and `sitemap-xml.php`. Verified emitting on all pages.
+- **Full E2E QA (testing agent iter-22):** 100% pass, no bugs. Verified all 5 regional storefronts + currency conversion (CA$/£/AU$/€/$), cart, coupon MAVEN20, DEMO checkout → order-success, admin login + all 16 admin tabs, AI chat lead capture, newsletter, dark mode, 404 handling. No PHP errors on any page.
+- **UX niceties applied:** `/register.php` now 301→`/track-order.php` (was admin login); `/contact-us[.php]` 301→`/contact.php` (router.php + .htaccess).

@@ -62,6 +62,9 @@ RewriteRule ^manifest(\.webmanifest|\.json)?$    manifest-webmanifest.php  [L,QS
 RewriteRule ^og-default\.(png|jpe?g)$            og-default.php            [L,QSA]
 RewriteRule ^og-product\.(png|jpe?g)$            og-product.php            [L,QSA]
 
+# ---- Frequently-guessed alias → canonical contact page (301). ----
+RewriteRule ^contact-us(\.php)?/?$  /contact.php  [R=301,L]
+
 # ---- Regional storefront prefixes (/ca, /uk, /au, /eu) localise the currency;
 #      /us is the canonical root and 301-redirects to the bare path. Mirrors
 #      router.php so these regional links resolve on Apache / cPanel hosting —

@@ -8,6 +8,8 @@
  * sign-in page so the public surface area stays minimal.
  */
 require_once __DIR__ . '/includes/functions.php';
-http_response_code(410);
-header('Location: login.php', true, 302);
+// Customers have no accounts — send them to the documented re-access path
+// (Track Order / Order History via email + order number) rather than the
+// admin sign-in page, which is confusing for a shopper.
+header('Location: track-order.php', true, 301);
 exit;

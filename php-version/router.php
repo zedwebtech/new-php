@@ -252,6 +252,11 @@ if ($path === '/embed' || $path === '/embed/' || $path === '/press-kit' || $path
     require __DIR__ . '/press-kit.php';
     return true;
 }
+// Frequently-guessed alias → canonical contact page (301 keeps link equity).
+if ($path === '/contact-us' || $path === '/contact-us.php' || $path === '/contact-us/') {
+    header('Location: /contact.php', true, 301);
+    return true;
+}
 // Serve site assets even when accessed under /hub/... (the browser
 // resolves relative URLs like `assets/css/x.css` against /hub/<slug>
 // — without a trailing slash, the last segment is dropped, so requests
