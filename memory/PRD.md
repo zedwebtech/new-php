@@ -1005,3 +1005,9 @@ Goal: product/plan images must never break on thank-you page, emails, receipts, 
 - **PDF receipts/invoices**: confirmed they use bundled LOCAL brand-watermark images (isRemoteEnabled=false, chroot) — no per-product image dependency; both generate valid %PDF files.
 - **Thank-you page (order-success)**: product image is root-relative `/uploads/...` (+ onerror placeholder) — loads on any host.
 - **Subscriptions**: plan icons were seeded with Emergent build-CDN URLs (static.prod-images.emergentagent.com) — re-pointed to bundled local images (/assets/images/subscriptions/<slug>.png) in the live DB, database.sql seed, and an idempotent start.sh migration. Verified all 4 render.
+
+---
+## Subscription icons optimized to WebP (2026-06-25)
+- The 4 plan icons were 512px PNGs (182–297 KB) displayed at 84px. Downscaled to 256px and generated optimized PNG (51–85 KB, kept for email/PDF fallback) + WebP (9–16 KB) siblings in assets/images/subscriptions/.
+- subscriptions.php now renders `<picture>` with a WebP `<source>` (only when the .webp exists on disk) + PNG `<img>` fallback (width/height=84 for CLS).
+- Subscriptions page icon weight: ~1040 KB -> ~48 KB (95% smaller). Verified all 4 render via WebP with PNG fallback intact for older clients/email.

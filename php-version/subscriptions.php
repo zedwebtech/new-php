@@ -51,10 +51,17 @@ include __DIR__ . '/includes/header.php';
           <div class="card h-100 shadow-sm <?= $featured ? 'border-primary' : '' ?>" style="border-radius:16px;<?= $featured ? 'border-width:2px;' : '' ?>" data-testid="sub-card-<?= esc($p['slug']) ?>">
             <?php if ($featured): ?><div class="text-center"><span class="badge text-bg-primary rounded-pill" style="margin-top:-12px;">Most popular</span></div><?php endif; ?>
             <div class="card-body d-flex flex-column p-4">
-              <?php if (!empty($p['icon_image'])): ?>
+              <?php if (!empty($p['icon_image'])):
+                  $iconPng  = (string)$p['icon_image'];
+                  $iconWebp = preg_replace('/\.png$/i', '.webp', $iconPng);
+                  $hasWebp  = $iconWebp !== $iconPng && is_file(__DIR__ . '/' . ltrim($iconWebp, '/'));
+              ?>
                 <div class="text-center mb-2">
-                  <img src="<?= esc($p['icon_image']) ?>" alt="<?= esc($p['name']) ?> icon" data-testid="sub-icon-<?= esc($p['slug']) ?>" loading="lazy"
+                  <picture>
+                    <?php if ($hasWebp): ?><source srcset="<?= esc($iconWebp) ?>" type="image/webp"><?php endif; ?>
+                    <img src="<?= esc($iconPng) ?>" alt="<?= esc($p['name']) ?> icon" data-testid="sub-icon-<?= esc($p['slug']) ?>" loading="lazy" width="84" height="84"
                        style="width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(37,99,235,.22));">
+                  </picture>
                 </div>
               <?php endif; ?>
               <h3 class="h5 fw-bold mb-1 text-center"><?= esc($p['name']) ?></h3>
