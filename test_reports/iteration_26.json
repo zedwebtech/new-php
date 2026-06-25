@@ -1,0 +1,41 @@
+{
+  "summary": "Performance refactor (self-hosted vendor assets + subsetted Bootstrap-Icons font) verified across 6 user-facing pages. All vendor assets return 200, ZERO external CDN/font requests, Inter/Manrope applied, Bootstrap JS dropdowns work, region-aware checkout regressions passed (US/CA/AU placeholders + country pre-select + currency labels). ONE broken icon found: bi-flask is referenced on /checkout.php (line 378), /order-view.php, /admin.php but was omitted from the 310-glyph subset, so it renders as an empty tofu box on the Stripe demo/test-mode trust badge in checkout.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "checkout.php trust/test-mode badge", "issue": "bi-flask glyph is missing from the subsetted bootstrap-icons-subset.woff2 (subset has 310 of 311 used icons). Renders as empty box on /checkout.php (line 378 trust strip). Also affects /order-view.php and /admin.php (TEST mode pill, sandbox key banners).", "selector": "i.bi.bi-flask", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/login.php", "issues": ["Login page body computed font-family is -apple-system/BlinkMacSystemFont/Segoe UI (system stack), NOT Inter/Manrope. login.php loads bootstrap.min.css + bootstrap-icons.min.css from /assets/vendor but does NOT include fonts.css (Inter/Manrope @font-face). Likely intentional for the standalone admin login page (same pattern as iteration_25), but worth confirming with E1."]}
+    ]
+  },
+  "verified_features": [
+    "All 7 vendor assets return 200: bootstrap.min.css (227KB), bootstrap.bundle.min.js (79KB), bootstrap-icons.min.css (12KB), fonts.css (598B), Inter.woff2 (47KB), Manrope.woff2 (24KB), bootstrap-icons-subset.woff2 (22.4KB).",
+    "ZERO external requests to cdn.jsdelivr.net, fonts.googleapis.com, fonts.gstatic.com on home, /shop.php, product, /subscriptions.php, /contact.php, /login.php.",
+    "Inter, Manrope computed font-family present on document.body for home/shop/product/subscriptions/contact (not Times fallback).",
+    "Bootstrap JS dropdown verified working: currency selector (data-testid=currency-selector) opens .dropdown-menu.show showing AU/CA/EU/UK/US options. Nav dropdowns also open.",
+    "Region-aware checkout (regression OK): /checkout.php -> country=US, #co-zip placeholder=90210; /ca/checkout.php -> country=CA, placeholder=K1A 0B1; /au/checkout.php -> country=AU, placeholder=2000. Add-to-cart via /ajax/cart.php returned {ok:true,count:1}.",
+    "Product card currency labels OK: /shop.php=USD, /ca/shop.php=CAD, /au/shop.php=AUD (data-testid=card-currency-<slug>).",
+    "No missing icon glyphs detected on /, /shop.php, /product.php?slug=windows-11-pro, /subscriptions.php, /contact.php, /login.php (computed ::before content is non-empty for every i.bi element)."
+  ],
+  "test_report_links": ["/app/test_reports/iteration_26.json"],
+  "action_items": [
+    "Add bi-flask to the subset whitelist that builds /assets/vendor/fonts/bootstrap-icons-subset.woff2 and bootstrap-icons.min.css, then re-subset. Codebase scan (grep -rohE 'bi-[a-z0-9-]+' --include='*.php') confirms bi-flask is the ONLY currently-used icon missing from the subset (310 in subset vs 311 actually referenced).",
+    "(Optional) If admin login should match the rest of the site visually, add fonts.css to login.php so the body picks up Inter/Manrope. Currently it falls back to the system font stack.",
+    "(Optional hardening) The subset build appears to use a static whitelist. Several admin pages emit dynamic icon classes (e.g. `bi bi-<?= $icon ?>`, `bi bi-<?= $o==='Mac'?'apple':($o==='Windows'?'windows':'pc-display') ?>`). These are stored in the safety set today, but flag for future refactors so dynamic glyphs don't regress."
+  ],
+  "critical_code_review_comments": [
+    "Subset build needs a guard: a CI grep for `bi-[a-z0-9-]+` across *.php should diff against the subset whitelist and fail the build if any token is missing. bi-flask slipped through.",
+    "login.php duplicates header markup but skips fonts.css — consider sharing the asset block via an include so future vendor changes propagate automatically.",
+    "Bootstrap-icons.min.css size is 12.7KB and points to fonts/bootstrap-icons-subset.woff2 — good. fonts.css is only 598B with two @font-face declarations — fine."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only run)", "frontend": "92% (1 broken icon out of 311 used; all other checks pass)"},
+  "test_credentials": "not used (frontend visual+JS smoke test)",
+  "seed_data_creation": "Added 1 item to cart via /ajax/cart.php action=add (slug=microsoft-office-2024-professional-plus-windows) to exercise checkout. Cart is session-based so it does not persist across browser contexts.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After E1 adds bi-flask to the subset, re-fetch /assets/vendor/bootstrap-icons.min.css (should contain '.bi-flask::before') and /assets/vendor/fonts/bootstrap-icons-subset.woff2 (size will grow slightly from 22.4KB), then load /checkout.php in a browser and confirm the test-mode badge shows the flask glyph (not a box). The detection script used: iterate i.bi/span.bi elements and check getComputedStyle(el,'::before').content is not 'none'/empty. Region-aware checkout + currency labels are already passing — no need to re-verify unless header/footer changes again.",
+  "rca of the issue": "Bootstrap-Icons font was subsetted from 130KB (2050 glyphs) to 23KB (310 glyphs) by hand-picking from a codebase scan + safety set. The scan missed bi-flask which appears in 4 templates: checkout.php (Stripe demo badge), order-view.php (TEST pill), admin.php twice (sandbox warning + keys card). Reproduction: open /checkout.php in the preview URL, scroll to the trust strip; an empty rectangle appears where the flask icon should be. Mitigation: add 'bi-flask' to the subset glyph list and rebuild the woff2 + CSS. Long-term: add a CI step that diffs `grep -rohE 'bi-[a-z0-9-]+' --include='*.php'` against the subset whitelist."
+}

@@ -318,7 +318,7 @@
    as the previous blocking <script> but with no parser pause.  This is
    the single biggest Core-Web-Vitals win for a server-rendered site.
 -->
-<script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script defer src="assets/vendor/bootstrap.bundle.min.js?v=<?= esc(@filemtime(__DIR__ . '/../assets/vendor/bootstrap.bundle.min.js')) ?>"></script>
 <script defer src="assets/js/main.js?v=<?= esc(@filemtime(__DIR__ . '/../assets/js/main.js')) ?>"></script>
 
 <!--

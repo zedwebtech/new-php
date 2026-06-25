@@ -76,8 +76,8 @@ $pageTitle = 'Share Your Feedback · ' . esc(SITE_BRAND);
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= esc($pageTitle) ?></title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="/assets/vendor/bootstrap.min.css" rel="stylesheet">
+<link href="/assets/vendor/bootstrap-icons.min.css" rel="stylesheet">
 <style>
 body { background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); min-height:100vh; font-family:-apple-system,Segoe UI,Roboto,sans-serif; padding:30px 12px; }
 .review-card { max-width:580px; margin:0 auto; background:#fff; border-radius:18px; padding:36px 30px; box-shadow:0 20px 60px rgba(0,0,0,.25); }

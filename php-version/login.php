@@ -62,8 +62,8 @@ $brandLogo = $co['logo']  ?? '';
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#06b6d4">
 <link rel="icon" href="/assets/images/icons/admin-192.png">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="/assets/vendor/bootstrap.min.css" rel="stylesheet">
+<link href="/assets/vendor/bootstrap-icons.min.css" rel="stylesheet">
 <script>
   // Apply saved admin theme BEFORE styles render — prevents flash of light/dark.
   // We sync TWO storage locations so the choice carries everywhere:

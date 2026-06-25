@@ -535,29 +535,16 @@ echo $initialTheme !== '' ? ' data-bs-theme="' . esc($initialTheme) . '"' : '';
   <!-- Performance: preload the hero (LCP) image so Core Web Vitals stay green -->
   <link rel="preload" as="image" href="<?= esc($preloadImage) ?>" fetchpriority="high">
   <?php endif; ?>
-  <!-- Performance: pre-resolve DNS + warm TLS to the third-party CDNs we hit
-       on every page so Core Web Vitals (LCP / FCP) stay green. -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Bootstrap-Icons is render-blocking on every page but the icons aren't
-       in the critical above-the-fold paint path. Load it asynchronously
-       via the print-onload trick so it never blocks LCP. -->
-  <link rel="preload" as="style" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"></noscript>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Manrope — variable font from Google Fonts (wght@400..800 axis) gives
-       us the full weight range (body, semibold, bold, headings) from ONE
-       compressed WOFF2 file instead of 6 separate discrete-weight files.
-       Saves ~80 KB vs the wght@300;400;500;600;700;800 bundle that
-       Lighthouse flagged as "oversized web font". -->
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap" rel="stylesheet">
-  <!-- Inter — primary geometric sans, used by the Zoom-inspired theme block
-       at the bottom of style.css.  Variable-weight + display:swap so the
-       initial render still happens with the system fallback if Google Fonts
-       is blocked on a corporate network. -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Performance: ALL CSS / JS / fonts are self-hosted (same-origin) so there
+       are zero third-party DNS + TLS round-trips on first paint. Bootstrap,
+       Bootstrap-Icons (subsetted to the ~310 icons we actually use → 130KB→23KB)
+       and the Inter/Manrope variable fonts all ship from /assets/vendor and are
+       cached immutably for a year. -->
+  <link href="assets/vendor/bootstrap.min.css?v=<?= esc(@filemtime(__DIR__ . '/../assets/vendor/bootstrap.min.css')) ?>" rel="stylesheet">
+  <link rel="preload" as="font" type="font/woff2" href="/assets/vendor/fonts/Inter.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/assets/vendor/fonts/bootstrap-icons-subset.woff2" crossorigin>
+  <link href="assets/vendor/fonts.css?v=<?= esc(@filemtime(__DIR__ . '/../assets/vendor/fonts.css')) ?>" rel="stylesheet">
+  <link href="assets/vendor/bootstrap-icons.min.css?v=<?= esc(@filemtime(__DIR__ . '/../assets/vendor/bootstrap-icons.min.css')) ?>" rel="stylesheet">
   <link href="assets/css/style.css?v=<?= esc(@filemtime(__DIR__ . '/../assets/css/style.css')) ?>" rel="stylesheet">
   <link href="assets/css/dark-mode-polish.css?v=<?= esc(@filemtime(__DIR__ . '/../assets/css/dark-mode-polish.css')) ?>" rel="stylesheet">
   <script>window.SITE_PHONE = '<?= esc($brandPhone) ?>'; window.CART_SLUGS = <?= json_encode(array_keys(cart())) ?>;</script>
