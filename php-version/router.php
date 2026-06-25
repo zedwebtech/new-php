@@ -24,6 +24,16 @@ $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
    =================================================================== */
 $GLOBALS['MV_COUNTRY']  = 'US';
 $GLOBALS['MV_PREFIXED'] = false;
+/* SELF-HEAL stacked country prefixes — e.g. an old/cached link or a stale
+   region switcher could produce /uk/au/shop. Collapse to the FIRST prefix
+   (the most recently clicked region, which the switcher prepends): keep /uk,
+   drop the following country segment, then 301 to /uk/shop. Re-runs until a
+   single prefix remains. */
+if (preg_match('#^/(us|uk|au|ca|eu)/(us|uk|au|ca|eu)(/.*|)$#i', $path, $dm)) {
+    $qs = ((string)($_SERVER['QUERY_STRING'] ?? '') !== '') ? ('?' . $_SERVER['QUERY_STRING']) : '';
+    header('Location: /' . strtolower($dm[1]) . $dm[3] . $qs, true, 301);
+    return true;
+}
 if (preg_match('#^/(us|uk|au|ca|eu)(/.*|)$#i', $path, $cm)) {
     $cc   = strtoupper($cm[1]);
     $rest = ($cm[2] !== '' && $cm[2] !== null) ? $cm[2] : '/';
@@ -357,13 +367,19 @@ if ($path !== '/' && file_exists($file) && !is_dir($file)) {
         header_remove('Expires');
         header('Cache-Control: public, max-age=31536000, immutable', true);
         header('Access-Control-Allow-Origin: *', true);
-        header('Content-Length: ' . filesize($file), true);
         // Conditional GET — return 304 when ETag matches.
         $etag = '"' . md5_file($file) . '"';
         header('ETag: ' . $etag);
         if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === $etag) {
             http_response_code(304);
             return true;
+        }
+        // Text assets (css/js/svg) are served WITHOUT an explicit Content-Length
+        // so the global ob_gzhandler can gzip them on the wire (style.css drops
+        // from ~154 KB to ~25 KB). Binary assets (images/fonts) are already
+        // compressed, so we keep Content-Length and serve them as-is.
+        if (!in_array($ext, ['css', 'js', 'svg'], true)) {
+            header('Content-Length: ' . filesize($file), true);
         }
         readfile($file);
         return true;

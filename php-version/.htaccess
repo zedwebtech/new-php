@@ -65,6 +65,13 @@ RewriteRule ^og-product\.(png|jpe?g)$            og-product.php            [L,QS
 # ---- Frequently-guessed alias → canonical contact page (301). ----
 RewriteRule ^contact-us(\.php)?/?$  /contact.php  [R=301,L]
 
+# ---- SELF-HEAL stacked country prefixes (e.g. /uk/au/shop from an old cached
+#      link or stale switcher) — collapse to the FIRST prefix (the region the
+#      visitor most recently clicked, which the switcher prepends) and 301 to
+#      /uk/shop. Re-runs until a single prefix remains. Must precede the
+#      single-prefix rules below. ----
+RewriteRule ^(us|uk|au|ca|eu)/(us|uk|au|ca|eu)(/.*)?$  /$1$3  [R=301,L,QSA]
+
 # ---- Regional storefront prefixes (/ca, /uk, /au, /eu) localise the currency;
 #      /us is the canonical root and 301-redirects to the bare path. Mirrors
 #      router.php so these regional links resolve on Apache / cPanel hosting —
@@ -123,9 +130,23 @@ Options -Indexes
 # ---- Pretty error page for 404 ----
 ErrorDocument 404 /404.php
 
-# ---- Gzip compression ----
+# ---- Text compression — robust across hosts (Brotli → gzip/deflate →
+#      legacy mod_gzip). Without this, style.css (~154 KB) + main.js (~48 KB)
+#      ship UNCOMPRESSED on hosts where only one module is present, which is
+#      the #1 cause of a "heavy/slow" first paint on shared hosting. ----
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/html text/css application/javascript application/json text/xml application/xml application/rss+xml image/svg+xml text/plain application/x-javascript text/javascript
+</IfModule>
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json text/xml application/xml application/rss+xml image/svg+xml text/plain
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json text/xml application/xml application/rss+xml image/svg+xml text/plain application/x-javascript text/javascript application/vnd.ms-fontobject application/x-font-ttf font/opentype
+</IfModule>
+<IfModule mod_gzip.c>
+    mod_gzip_on Yes
+    mod_gzip_dechunk Yes
+    mod_gzip_item_include mime ^text/.*
+    mod_gzip_item_include mime ^application/(javascript|json|xml|rss\+xml)
+    mod_gzip_item_include mime ^image/svg\+xml
+    mod_gzip_item_include file \.(html?|css|js|json|xml|svg|txt)$
 </IfModule>
 
 # ---- Static-asset cache (1 year) ----

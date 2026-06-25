@@ -984,3 +984,14 @@ corner) — no explicit "X" close.
 
 ### NOTE for this preview pod
 PHP + MariaDB are apt-installed and DO NOT survive a pod restart (only /app persists). If the preview is down after a restart, reinstall: `apt-get install -y php-cli php-mysql php-curl php-mbstring php-xml php-gd php-zip php-bcmath mariadb-server mariadb-client`, start mariadb (`mysqld_safe &`), then `supervisorctl restart frontend` (start.sh reseeds the DB). This is a preview-only concern; real cPanel/Apache hosting always has PHP+MySQL.
+
+---
+## Country switcher self-heal + performance (2026-06-25)
+**Switcher stacking on deploy:** Already fixed via country_switch_base() (prev entry). Added a SELF-HEAL safety net so any already-stacked URL (e.g. /uk/au/shop from a cached link) 301-collapses to the FIRST prefix (/uk/shop = most recently clicked region). Implemented in BOTH router.php (preview) and .htaccess (production). Verified on real Apache: /uk/au/shop→/uk/shop(GBP), /ca/uk/au/shop→/ca/shop(CAD), /au/ca/uk/eu/shop→/au/shop(AUD).
+
+**Performance ("heavy/slow page"):**
+- Root cause on deploy: large TEXT assets shipped uncompressed on hosts lacking the one compression module the old .htaccess checked. style.css was 154 KB, main.js 48 KB on the wire.
+- .htaccess now enables Brotli → deflate → legacy mod_gzip (robust across cPanel/LiteSpeed/Apache) for all text/css/js/json/xml/svg.
+- router.php (preview) now lets the global gzip handler compress css/js/svg (removed the explicit Content-Length that disabled it): style.css 154→29 KB, main.js 48→13 KB on the wire.
+- Removed orphan 1.1 MB assets/images/hero/hero-brand.png (unreferenced dead weight).
+- Confirmed product images are already optimized WebP (~15 KB), head already has preconnect, async icon CSS, preloaded LCP image, deferred JS, swap fonts.
