@@ -761,11 +761,21 @@ if (empty($GLOBALS['MV_COUNTRY']) && !empty($_GET['mv_cc'])) {
         $GLOBALS['MV_PREFIXED'] = ($__mvcc !== 'US');
     }
 }
-if (!empty($GLOBALS['MV_COUNTRY']) && isset($__countryCurrency[$GLOBALS['MV_COUNTRY']])
-    && isset($GLOBALS['CURRENCIES'][$__countryCurrency[$GLOBALS['MV_COUNTRY']]])) {
-    $_SESSION['currency'] = $__countryCurrency[$GLOBALS['MV_COUNTRY']];
-} elseif (isset($_GET['cur']) && isset($GLOBALS['CURRENCIES'][$_GET['cur']])) {
+/* Resolve the storefront currency deterministically from the region on EVERY
+   request. The canonical US storefront is the bare (un-prefixed) path, so an
+   empty MV_COUNTRY means United States — we must actively reset the currency to
+   USD, otherwise a previously-selected region (e.g. CAD after visiting /ca/...)
+   would stick in the PHP session when the shopper switches back to the US on
+   Apache, where /us/... 301s to a bare path carrying no mv_cc. An explicit
+   ?cur= switch still wins for manual overrides. */
+if (isset($_GET['cur']) && isset($GLOBALS['CURRENCIES'][$_GET['cur']])) {
     $_SESSION['currency'] = $_GET['cur'];
+} else {
+    $__ctry = strtoupper((string)($GLOBALS['MV_COUNTRY'] ?? 'US'));
+    if (!in_array($__ctry, ['US', 'UK', 'AU', 'CA', 'EU'], true)) $__ctry = 'US';
+    if (isset($__countryCurrency[$__ctry]) && isset($GLOBALS['CURRENCIES'][$__countryCurrency[$__ctry]])) {
+        $_SESSION['currency'] = $__countryCurrency[$__ctry];
+    }
 }
 
 /** Current country code for the request (US|UK|AU|CA|EU). US = canonical root. */
