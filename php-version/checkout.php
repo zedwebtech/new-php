@@ -5,6 +5,38 @@ require_once __DIR__ . '/includes/mailer.php';
 require_once __DIR__ . '/includes/stripe.php';
 $pageTitle = 'Secure Checkout | ' . SITE_BRAND;
 
+/* Region-aware checkout address formats. The visible address form (country
+   default, phone dial code, state/province/county label + options, postal
+   label + placeholder + validation) adapts to the shopper's selected region
+   so an Australian buyer sees "State/Territory" + "Postcode", a Canadian sees
+   "Province" + "Postal Code", etc. — instead of the US ZIP/State layout for
+   everyone. Single source of truth, shared by the form render, the server-side
+   validation and the client-side JS (json_encoded below). */
+$REGION_FORMS = [
+    'US' => ['country'=>'US','dial'=>'+1','flag'=>'🇺🇸','region_label'=>'State','region_required'=>true,
+        'regions'=>['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC','Other'],
+        'postal_label'=>'ZIP Code','postal_ph'=>'90210','postal_re'=>'^\\d{5}(-\\d{4})?$','postal_err'=>'US ZIP must be 5 digits (e.g. 90210).'],
+    'CA' => ['country'=>'CA','dial'=>'+1','flag'=>'🇨🇦','region_label'=>'Province','region_required'=>true,
+        'regions'=>['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT'],
+        'postal_label'=>'Postal Code','postal_ph'=>'K1A 0B1','postal_re'=>'^[A-Za-z]\\d[A-Za-z] ?\\d[A-Za-z]\\d$','postal_err'=>'Enter a valid Canadian postal code (e.g. K1A 0B1).'],
+    'UK' => ['country'=>'UK','dial'=>'+44','flag'=>'🇬🇧','region_label'=>'County','region_required'=>false,
+        'regions'=>[],
+        'postal_label'=>'Postcode','postal_ph'=>'SW1A 1AA','postal_re'=>'^[A-Za-z]{1,2}\\d[A-Za-z\\d]? ?\\d[A-Za-z]{2}$','postal_err'=>'Enter a valid UK postcode (e.g. SW1A 1AA).'],
+    'AU' => ['country'=>'AU','dial'=>'+61','flag'=>'🇦🇺','region_label'=>'State/Territory','region_required'=>true,
+        'regions'=>['ACT','NSW','NT','QLD','SA','TAS','VIC','WA'],
+        'postal_label'=>'Postcode','postal_ph'=>'2000','postal_re'=>'^\\d{4}$','postal_err'=>'Australian postcode must be 4 digits (e.g. 2000).'],
+    'EU' => ['country'=>'EU','dial'=>'+49','flag'=>'🇪🇺','region_label'=>'Region / State','region_required'=>false,
+        'regions'=>[],
+        'postal_label'=>'Postal Code','postal_ph'=>'10115','postal_re'=>'^.{3,}$','postal_err'=>'Postal code is too short.'],
+];
+/* Map the active storefront currency back to the address region so the form
+   defaults to the country the shopper is buying from. */
+$__curToRegion = ['USD'=>'US','CAD'=>'CA','GBP'=>'UK','AUD'=>'AU','EUR'=>'EU'];
+$__activeCur   = current_currency()['code'];
+$curRegionCC   = $__curToRegion[$__activeCur] ?? current_country_code();
+if (!isset($REGION_FORMS[$curRegionCC])) $curRegionCC = 'US';
+
+
 // Subscription checkout — when a visitor arrives via /subscribe.php the
 // session carries the chosen plan.  We synthesise a single line item from the
 // plan and bypass the product cart / coupons / ProAssist entirely.
@@ -52,7 +84,10 @@ if ($isSub) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $required = ['email', 'first_name', 'last_name', 'phone', 'address', 'city', 'state', 'zip'];
+    $postCC = strtoupper(trim($_POST['country'] ?? 'US'));
+    if (!isset($REGION_FORMS[$postCC])) $postCC = 'US';
+    $required = ['email', 'first_name', 'last_name', 'phone', 'address', 'city', 'zip'];
+    if (!empty($REGION_FORMS[$postCC]['region_required'])) $required[] = 'state';
     foreach ($required as $f) {
         if (trim($_POST[$f] ?? '') === '') $errors[] = ucwords(str_replace('_', ' ', $f)) . ' is required.';
     }
@@ -90,14 +125,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (preg_match('/^[a-z\s]+$/i', $addrVal)) $issues[] = 'just letters — missing street/number?';
             if ($issues) $errors[] = 'Billing address looks incomplete: ' . implode(', ', $issues) . '.';
         }
-        // US ZIP shape: 5 digits or ZIP+4. Other countries: at least 3 chars.
+        // Postal / ZIP shape — validated against the submitted country's format
+        // (US 5-digit, CA A1A 1A1, UK postcode, AU 4-digit, EU 3+ chars).
         $zipVal     = trim($_POST['zip'] ?? '');
         $countryVal = strtoupper(trim($_POST['country'] ?? 'US'));
+        if (!isset($REGION_FORMS[$countryVal])) $countryVal = 'US';
         if ($zipVal !== '') {
-            if ($countryVal === 'US' && !preg_match('/^\d{5}(-\d{4})?$/', $zipVal)) {
-                $errors[] = 'US ZIP must be 5 digits (e.g. 90210).';
-            } elseif (strlen($zipVal) < 3) {
-                $errors[] = 'ZIP / Postal code is too short.';
+            $rfPost = $REGION_FORMS[$countryVal];
+            if (!preg_match('/' . $rfPost['postal_re'] . '/', $zipVal)) {
+                $errors[] = $rfPost['postal_err'];
             }
         }
         // Phone — at least 7 digits in the local part (international numbers
@@ -106,12 +142,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($phoneDigits !== '' && strlen($phoneDigits) < 7) {
             $errors[] = 'Phone number is too short — please enter at least 7 digits.';
         }
-        // State must be a known US state (or 'Other') — the form already
-        // restricts the dropdown, but a spoofed POST could send anything.
+        // State / province / county — when the country has a fixed list (US/CA/AU)
+        // the value must be one of them; free-text regions (UK/EU) accept anything.
         $stateVal = trim($_POST['state'] ?? '');
-        $validStates = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC','Other'];
-        if ($stateVal !== '' && !in_array($stateVal, $validStates, true)) {
-            $errors[] = 'Please select a valid state.';
+        $validStates = $REGION_FORMS[$countryVal]['regions'];
+        if ($stateVal !== '' && !empty($validStates) && !in_array($stateVal, $validStates, true)) {
+            $errors[] = 'Please select a valid ' . strtolower($REGION_FORMS[$countryVal]['region_label']) . '.';
         }
     }
 
@@ -411,7 +447,13 @@ include __DIR__ . '/includes/header.php';
           <label class="form-label">Phone Number *</label>
           <?php
           $phoneFlags = ['+1' => '🇺🇸', '+44' => '🇬🇧', '+61' => '🇦🇺', '+49' => '🇩🇪', '+33' => '🇫🇷', '+34' => '🇪🇸', '+39' => '🇮🇹', '+31' => '🇳🇱', '+91' => '🇮🇳', '+971' => '🇦🇪', '+64' => '🇳🇿'];
-          $selCode = $_POST['phone_code'] ?? '+1';
+          // Region the form should default to: a re-displayed form (validation
+          // error) keeps the POSTed country; a fresh form follows the storefront
+          // region derived from the active currency.
+          $formCC = strtoupper(trim($_POST['country'] ?? '')) ?: $curRegionCC;
+          if (!isset($REGION_FORMS[$formCC])) $formCC = 'US';
+          $rf = $REGION_FORMS[$formCC];
+          $selCode = $_POST['phone_code'] ?? $rf['dial'];
           ?>
           <div class="input-group phone-group">
             <span class="input-group-text phone-flag" id="phone-flag" data-testid="phone-flag"><?= $phoneFlags[$selCode] ?? '🇺🇸' ?></span>
@@ -431,23 +473,27 @@ include __DIR__ . '/includes/header.php';
         <div class="col-md-4"><label class="form-label">Address Line 2</label><input name="address2" class="form-control" value="<?= esc($_POST['address2'] ?? '') ?>"></div>
         <div class="col-md-3 col-6">
           <label class="form-label">Country *</label>
-          <select name="country" class="form-select">
+          <select name="country" id="co-country" class="form-select" onchange="mvApplyCheckoutRegion(this.value)" data-testid="country-select">
             <?php foreach (['US' => 'United States', 'CA' => 'Canada', 'UK' => 'United Kingdom', 'AU' => 'Australia', 'EU' => 'Europe (Other)'] as $c => $n): ?>
-              <option value="<?= $c ?>" <?= ($_POST['country'] ?? 'US') === $c ? 'selected' : '' ?>><?= $n ?></option>
+              <option value="<?= $c ?>" <?= $formCC === $c ? 'selected' : '' ?>><?= $n ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="col-md-3 col-6"><label class="form-label">City *</label><input name="city" required class="form-control" value="<?= esc($_POST['city'] ?? '') ?>"></div>
-        <div class="col-md-3 col-6">
-          <label class="form-label">State *</label>
-          <select name="state" required class="form-select" data-testid="state-select">
+        <div class="col-md-3 col-6" id="co-region-wrap">
+          <label class="form-label" id="co-region-label"><?= esc($rf['region_label']) ?><?= $rf['region_required'] ? ' *' : '' ?></label>
+          <?php if (!empty($rf['regions'])): ?>
+          <select name="state" <?= $rf['region_required'] ? 'required' : '' ?> class="form-select" data-testid="state-select">
             <option value="">Select</option>
-            <?php foreach (['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC','Other'] as $st): ?>
+            <?php foreach ($rf['regions'] as $st): ?>
               <option value="<?= $st ?>" <?= ($_POST['state'] ?? '') === $st ? 'selected' : '' ?>><?= $st ?></option>
             <?php endforeach; ?>
           </select>
+          <?php else: ?>
+          <input name="state" <?= $rf['region_required'] ? 'required' : '' ?> class="form-control" value="<?= esc($_POST['state'] ?? '') ?>" data-testid="state-select" placeholder="<?= esc($rf['region_label']) ?>">
+          <?php endif; ?>
         </div>
-        <div class="col-md-3 col-6"><label class="form-label">ZIP Code *</label><input name="zip" required class="form-control" value="<?= esc($_POST['zip'] ?? '') ?>"></div>
+        <div class="col-md-3 col-6"><label class="form-label" id="co-postal-label"><?= esc($rf['postal_label']) ?> *</label><input name="zip" required class="form-control" value="<?= esc($_POST['zip'] ?? '') ?>" id="co-postal" placeholder="<?= esc($rf['postal_ph']) ?>" data-testid="zip-input"></div>
         <div class="col-12">
           <div class="form-check mb-0">
             <input class="form-check-input" type="checkbox" name="sms_consent" id="sms-consent" value="1" <?= !empty($_POST['sms_consent']) ? 'checked' : '' ?> data-testid="sms-consent">
@@ -577,6 +623,50 @@ include __DIR__ . '/includes/header.php';
 .checkout-hint .hint-btn.is-primary { background: #f59e0b; color:#fff; border-color:#f59e0b; }
 .checkout-hint .hint-btn.is-primary:hover { background:#d97706; border-color:#d97706; }
 </style>
+<script>
+/* Region-aware checkout address form. The PHP $REGION_FORMS config is the
+   single source of truth; this mirrors it client-side so changing the Country
+   select instantly reshapes the State/Province/County field, its label, the
+   Postal/ZIP label + placeholder and the phone dial code — without a reload. */
+window.MV_REGION_FORMS = <?= json_encode($REGION_FORMS) ?>;
+function mvApplyCheckoutRegion(cc) {
+  var rf = window.MV_REGION_FORMS[cc] || window.MV_REGION_FORMS['US'];
+  if (!rf) return;
+  // --- Region (state/province/county) field: rebuild as <select> or <input> ---
+  var wrap = document.getElementById('co-region-wrap');
+  if (wrap) {
+    var prev = '';
+    var prevEl = wrap.querySelector('[name="state"]');
+    if (prevEl) prev = prevEl.value;
+    var reqAttr = rf.region_required ? ' required' : '';
+    var html = '<label class="form-label" id="co-region-label">' + rf.region_label + (rf.region_required ? ' *' : '') + '</label>';
+    if (rf.regions && rf.regions.length) {
+      html += '<select name="state"' + reqAttr + ' class="form-select" data-testid="state-select"><option value="">Select</option>';
+      rf.regions.forEach(function (s) {
+        html += '<option value="' + s + '"' + (s === prev ? ' selected' : '') + '>' + s + '</option>';
+      });
+      html += '</select>';
+    } else {
+      html += '<input name="state"' + reqAttr + ' class="form-control" value="' + (prev || '').replace(/"/g, '&quot;') + '" data-testid="state-select" placeholder="' + rf.region_label + '">';
+    }
+    wrap.innerHTML = html;
+  }
+  // --- Postal / ZIP label + placeholder ---
+  var pl = document.getElementById('co-postal-label');
+  if (pl) pl.textContent = rf.postal_label + ' *';
+  var pin = document.getElementById('co-postal');
+  if (pin) pin.setAttribute('placeholder', rf.postal_ph || '');
+  // --- Phone dial code + flag ---
+  var pc = document.getElementById('phone-code');
+  if (pc && rf.dial) {
+    for (var i = 0; i < pc.options.length; i++) {
+      if (pc.options[i].value === rf.dial) { pc.selectedIndex = i; break; }
+    }
+    if (typeof syncPhoneFlag === 'function') syncPhoneFlag(pc);
+  }
+}
+</script>
+
 <script>
 (function(){
   // ===== Email field — DNS MX + typo dictionary check on blur =====
@@ -759,24 +849,30 @@ include __DIR__ . '/includes/header.php';
       ['input[name="last_name"]',  'Last name is required.'],
       ['input[name="phone"]',      'Phone number is required.'],
       ['input[name="city"]',       'City is required.'],
-      ['select[name="state"]',     'Please select a state.'],
-      ['input[name="zip"]',        'ZIP / Postal code is required.'],
       ['select[name="country"]',   'Country is required.'],
     ];
     requiredMap.forEach(([sel, msg]) => {
       const el = document.querySelector(sel);
       if (el && !el.value.trim()) mark(el, msg);
     });
+    // State / province / county — required only for regions that have a fixed list.
+    const stateEl = document.querySelector('[name="state"]');
+    const countryEl = document.querySelector('select[name="country"]');
+    const rf = (window.MV_REGION_FORMS || {})[countryEl ? countryEl.value : 'US'] || {};
+    if (stateEl && rf.region_required && !stateEl.value.trim()) {
+      mark(stateEl, 'Please select a ' + (rf.region_label || 'state').toLowerCase() + '.');
+    }
 
-    // Basic ZIP sanity by country (US = 5 digit, other = at least 3 chars)
+    // Postal / ZIP sanity by the selected country's format.
     const zip = document.querySelector('input[name="zip"]');
-    const country = document.querySelector('select[name="country"]');
     if (zip && zip.value.trim()) {
       const z = zip.value.trim();
-      if (country && country.value === 'US' && !/^\d{5}(-\d{4})?$/.test(z)) {
-        mark(zip, 'US ZIP must be 5 digits (e.g. 90210).');
+      if (rf.postal_re) {
+        try {
+          if (!(new RegExp(rf.postal_re)).test(z)) mark(zip, rf.postal_err || 'Postal code looks invalid.');
+        } catch (e) { if (z.length < 3) mark(zip, 'Postal code is too short.'); }
       } else if (z.length < 3) {
-        mark(zip, 'ZIP / Postal code is too short.');
+        mark(zip, 'Postal code is too short.');
       }
     }
     // Phone — at least 7 digits in the local part.

@@ -1995,6 +1995,7 @@ function render_stars(float $rating): string
 // Wide horizontal product banner row — shared by shop list view and category pages
 function render_product_row(array $p): string
 {
+    $curCode = current_currency()['code'];
     $pct = ($p['original_price'] && $p['original_price'] > $p['price'])
         ? round((1 - $p['price'] / $p['original_price']) * 100) : 0;
     $orig = $pct ? '<small class="text-secondary text-decoration-line-through d-block">' . format_price((float)$p['original_price']) . '</small>' : '';
@@ -2025,7 +2026,8 @@ function render_product_row(array $p): string
         </div>
         <div class="shop-row-buy text-sm-end flex-shrink-0">
           ' . $orig . '
-          <div class="fw-bold text-primary fs-4 lh-1 mb-2">' . format_price((float)$p['price']) . '</div>
+          <div class="fw-bold text-primary fs-4 lh-1 mb-1">' . format_price((float)$p['price']) . '</div>
+          <div class="mb-2"><span class="badge rounded-pill text-secondary bg-body-tertiary" style="font-size:.6rem;font-weight:600;letter-spacing:.04em;" data-testid="row-currency-' . esc($p['slug']) . '">Prices in ' . esc($curCode) . '</span></div>
           <div class="mb-2">' . render_stock_pill($p['slug']) . '</div>
           <div class="d-flex flex-sm-column gap-2">
             <button class="btn btn-sm btn-primary rounded-pill px-3 add-to-cart-btn" data-slug="' . esc($p['slug']) . '" data-testid="add-to-cart-' . esc($p['slug']) . '"><i class="bi bi-cart-plus me-1"></i>Add to Cart</button>
@@ -2039,6 +2041,7 @@ function render_product_row(array $p): string
 
 function render_product_card(array $p): string
 {
+    $curCode = current_currency()['code'];
     $pct = ($p['original_price'] && $p['original_price'] > $p['price'])
         ? round((1 - $p['price'] / $p['original_price']) * 100) : 0;
     $discount = $pct ? '<span class="badge text-bg-danger position-absolute top-0 end-0 m-2">-' . $pct . '%</span>' : '';
@@ -2065,7 +2068,7 @@ function render_product_card(array $p): string
         <div class="mb-2">' . $stockPill . '</div>
         <small class="text-secondary pc-meta mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Instant email delivery · One-time purchase</small>
         <div class="pc-price-row d-flex align-items-center justify-content-between gap-2 mt-auto pt-2">
-          <div class="lh-1 d-flex align-items-baseline gap-2"><span class="fw-bold text-primary fs-5">' . format_price((float)$p['price']) . '</span>' . $orig . '</div>
+          <div class="lh-1 d-flex align-items-baseline gap-2"><span class="fw-bold text-primary fs-5">' . format_price((float)$p['price']) . '</span>' . $orig . '<span class="text-secondary" style="font-size:.6rem;font-weight:600;letter-spacing:.04em;" data-testid="card-currency-' . esc($p['slug']) . '">' . esc($curCode) . '</span></div>
           ' . $cartBtn . '
         </div>
       </div>

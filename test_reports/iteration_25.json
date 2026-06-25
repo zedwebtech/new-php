@@ -1,0 +1,54 @@
+{
+  "summary": "Frontend-only verification of (1) per-region product card currency-code label and (2) region-aware checkout address form (default render, JS country-switch morph, per-region postcode validation). All 8 requested test scenarios pass on the live preview URL. No issues found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "tests_executed": {
+    "product_card_currency_label": {
+      "USD (/shop.php)": "37 cards, label 'USD' ✓",
+      "CAD (/ca/shop.php)": "37 cards, label 'CAD' ✓",
+      "AUD (/au/shop.php)": "37 cards, label 'AUD' ✓",
+      "GBP (/uk/shop.php)": "37 cards, label 'GBP' ✓",
+      "EUR (/eu/shop.php)": "37 cards, label 'EUR' ✓",
+      "row-currency-<slug>": "Not present on default grid view of shop.php (list view not active by default). Not a regression — render_product_row() data-testid is only emitted when the row template is used."
+    },
+    "checkout_region_defaults": {
+      "USD /checkout.php": "country=United States, region label='State *', SELECT (AL,AK,AZ,AR,CA,CO,CT,DE,...), postal='ZIP Code *', placeholder='90210', dial=+1, prices in $ ✓",
+      "CAD /ca/checkout.php": "country=Canada, region='Province *', SELECT (AB,BC,MB,NB,NL,NS,NT,NU,...), postal='Postal Code *', placeholder='K1A 0B1', dial=+1, prices in CA$ ✓",
+      "AUD /au/checkout.php": "country=Australia, region='State/Territory *', SELECT (ACT,NSW,NT,QLD,SA,TAS,VIC,WA), postal='Postcode *', placeholder='2000', dial=+61, prices in AU$ ✓",
+      "GBP /uk/checkout.php": "country=United Kingdom, region='County' (no asterisk — not required), INPUT (free-text, tag=INPUT), postal='Postcode *', placeholder='SW1A 1AA', dial=+44, prices in £ ✓",
+      "EUR /eu/checkout.php": "country=Europe (Other), region='Region / State' INPUT free-text, postal='Postal Code *', placeholder='10115', dial=+49, prices in € ✓"
+    },
+    "js_country_switch_morph": {
+      "window.MV_REGION_FORMS": "object with keys [US, CA, UK, AU, EU] ✓",
+      "window.mvApplyCheckoutRegion": "function ✓",
+      "US->CA": "label 'Province *', SELECT(AB,BC,…), 'Postal Code *' / 'K1A 0B1', dial +1 ✓",
+      "US->UK": "label 'County', tag morphed to INPUT, 'Postcode *' / 'SW1A 1AA', dial +44 ✓",
+      "US->AU": "label 'State/Territory *', SELECT(ACT,NSW,…), 'Postcode *' / '2000', dial +61 ✓",
+      "US->EU": "label 'Region / State', INPUT free-text, 'Postal Code *' / '10115', dial +49 ✓",
+      "US->US (round-trip)": "label 'State *', SELECT(AL,AK,…), 'ZIP Code *' / '90210', dial +1 ✓",
+      "state element tag toggles SELECT<->INPUT correctly per region": "✓"
+    },
+    "form_submission_au": {
+      "invalid_postcode_ABCDE": "Client validation blocks submit and shows Australian-specific error: 'Australian postcode must be 4 digits (e.g. 2000).' ✓",
+      "valid_postcode_2000_state_NSW": "Postcode/state pass validation; remaining errors are only Stripe card fields (Enter your card number / Expiry MM-YY / CVV 3-4 digits) — expected because Stripe demo/test mode requires card entry. Country saved as AU in payload; AU$ shown in summary. ✓"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Checkout JS uses inline onchange='mvApplyCheckoutRegion(this.value)' which works but exposes a global; consider attaching listener via addEventListener inside a DOMContentLoaded handler. (Minor.)",
+    "checkout.php is described as ~835+ lines including server config, render and JS — consider extracting MV_REGION_FORMS to includes/region_forms.php for reuse across cart/address books. (Maintainability, non-blocking.)"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only requested)", "frontend": "100%"},
+  "test_credentials": "Not required — guest checkout flow used.",
+  "seed_data_creation": "Used cart-only fixture: added product slug 'microsoft-office-2024-professional-plus-windows' via /ajax/cart.php?action=add for each region prefix to bypass cart->checkout redirect.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 5 regional checkout pages (US bare, /ca, /au, /uk, /eu) verified end-to-end via Playwright. Form fields names: email, phone_code, phone, first_name, last_name, address, address2, country (id=co-country, testid=country-select), city, state (testid=state-select; tag SELECT for US/CA/AU, INPUT for UK/EU), zip (id=co-postal, testid=zip-input). Submission uses inline form.requestSubmit() — clicking 'Pay Securely' button is intercepted by a 'testPreviewModal' on first load; use requestSubmit() in scripts. Stripe test/demo mode is by design — card fields will always emit client-side errors unless filled. The currency-label per card uses testid pattern card-currency-<slug>. Row view (row-currency-<slug>) is only rendered when list-mode template is used, not on default grid /shop.php — not a bug.",
+  "rca_of_the_issue": "No issues identified."
+}
