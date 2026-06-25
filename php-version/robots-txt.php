@@ -68,15 +68,14 @@ Allow: /
 
 <?php endforeach; ?>
 
-# ----- Sitemaps (auto-resolve to the live host) -----
+# ----- Sitemap (auto-resolves to the live host) -----
+# Only a valid XML sitemap (<urlset>/<sitemapindex>) belongs here. The product
+# feeds are RSS Merchant feeds (submit them in Google Merchant Center / Bing,
+# not as a Sitemap) and llms.txt / agents.json are AI-crawler files — listing
+# any of these as "Sitemap:" makes Search Console report an unsupported format.
 Sitemap: <?= $base ?>/sitemap.xml
 
-Sitemap: <?= $base ?>/merchant-feed.xml
-
-Sitemap: <?= $base ?>/feed/google-products.xml
-
-Sitemap: <?= $base ?>/feed/bing-shopping.xml
-
-Sitemap: <?= $base ?>/llms.txt
-
-Sitemap: <?= $base ?>/agents.json
+# Non-sitemap resources (discovery only — NOT submitted as sitemaps):
+#   Google Merchant feed : <?= $base ?>/merchant-feed.xml
+#   Bing shopping feed   : <?= $base ?>/feed/bing-shopping.xml
+#   AI guidance          : <?= $base ?>/llms.txt , <?= $base ?>/agents.json
