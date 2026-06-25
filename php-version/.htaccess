@@ -62,6 +62,16 @@ RewriteRule ^manifest(\.webmanifest|\.json)?$    manifest-webmanifest.php  [L,QS
 RewriteRule ^og-default\.(png|jpe?g)$            og-default.php            [L,QSA]
 RewriteRule ^og-product\.(png|jpe?g)$            og-product.php            [L,QSA]
 
+# ---- Regional storefront prefixes (/ca, /uk, /au, /eu) localise the currency;
+#      /us is the canonical root and 301-redirects to the bare path. Mirrors
+#      router.php so these regional links resolve on Apache / cPanel hosting —
+#      without these rules /ca, /uk, /au, /eu return a 404 on the live domain
+#      even though they work in the dev preview. The country is handed to PHP
+#      as ?mv_cc=XX (read by includes/functions.php to pick the currency). ----
+RewriteRule ^us(?:/(.*))?$          /$1                 [R=301,L,QSA]
+RewriteRule ^(ca|uk|au|eu)/(.+)$    $2?mv_cc=$1         [QSA,L]
+RewriteRule ^(ca|uk|au|eu)/?$       index.php?mv_cc=$1  [QSA,L]
+
 # ---- Generic extensionless → .php fallback.  Any /foo that has a matching
 #      foo.php file (and isn't a real file/dir) is served from it.  This
 #      keeps every clean URL working on the live server. ----

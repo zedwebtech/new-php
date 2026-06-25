@@ -377,4 +377,17 @@ if ($path === '/' || $path === '/index.php') {
     require __DIR__ . '/index.php';
     return true;
 }
+// Extensionless clean URLs (e.g. /shop, /about-us, or /ca/shop once the country
+// prefix has been stripped) → their matching .php file. Mirrors the Apache
+// ".htaccess" generic ".php fallback" so the dev preview resolves the same
+// clean URLs that production hosting serves.
+if (!preg_match('#\.[a-z0-9]+$#i', $path)) {
+    $phpFile = __DIR__ . '/' . trim($path, '/') . '.php';
+    if (is_file($phpFile)) {
+        $_SERVER['SCRIPT_NAME']     = '/' . trim($path, '/') . '.php';
+        $_SERVER['SCRIPT_FILENAME'] = $phpFile;
+        require $phpFile;
+        return true;
+    }
+}
 require __DIR__ . '/404.php';

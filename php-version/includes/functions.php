@@ -751,6 +751,16 @@ function ensure_db_schema(): void
 /* Country path-prefix (/au, /uk, /ca, /eu — set by router.php in $GLOBALS['MV_COUNTRY'])
    drives the storefront currency for the request. Falls back to the ?cur= switch. */
 $__countryCurrency = ['US' => 'USD', 'UK' => 'GBP', 'EU' => 'EUR', 'CA' => 'CAD', 'AU' => 'AUD'];
+/* Apache / cPanel hosting doesn't run router.php, so the regional prefix is
+   handed over by the .htaccess rewrite as ?mv_cc=XX. Honour it when router.php
+   hasn't already resolved the country for this request. */
+if (empty($GLOBALS['MV_COUNTRY']) && !empty($_GET['mv_cc'])) {
+    $__mvcc = strtoupper((string)$_GET['mv_cc']);
+    if (in_array($__mvcc, ['US', 'UK', 'AU', 'CA', 'EU'], true)) {
+        $GLOBALS['MV_COUNTRY']  = $__mvcc;
+        $GLOBALS['MV_PREFIXED'] = ($__mvcc !== 'US');
+    }
+}
 if (!empty($GLOBALS['MV_COUNTRY']) && isset($__countryCurrency[$GLOBALS['MV_COUNTRY']])
     && isset($GLOBALS['CURRENCIES'][$__countryCurrency[$GLOBALS['MV_COUNTRY']]])) {
     $_SESSION['currency'] = $__countryCurrency[$GLOBALS['MV_COUNTRY']];

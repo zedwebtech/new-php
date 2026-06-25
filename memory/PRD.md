@@ -957,3 +957,13 @@ corner) — no explicit "X" close.
 - X close button tap → `#mainNav` loses `.show` class, menu collapses ✓
 - Currency selector dropdown opens with all 5 regions (US/UK/AU/CA/EU)
   showing flag + code + label — same content as the desktop dropdown ✓
+
+---
+## Bug Fix — Regional country links 404 (2026-06-25)
+**Issue:** Clicking country links (US/UK/Canada/Europe/Australia → /ca/, /uk/, /au/, /eu/, /us/) returned 404 on production.
+**Root cause:** `.htaccess` (Apache/cPanel prod) lacked the country-prefix rewrite rules that `router.php` (dev preview) had. Prefixed URLs fell through to the generic `.php` fallback → 404.
+**Fix:**
+- `php-version/.htaccess`: added country-prefix rewrites — `/us*` 301→bare path; `/ca|uk|au|eu/*` strip prefix + pass `?mv_cc=XX`.
+- `php-version/includes/functions.php`: read `?mv_cc=XX` to set storefront currency when router.php isn't used (Apache).
+- `php-version/router.php`: added extensionless→`.php` resolver so clean URLs (e.g. `/ca/shop`) work in preview, matching production.
+**Verified:** on real Apache (temp install) `/ca/`,`/uk/`,`/au/`,`/eu/`→200, `/us/`→301; on preview all regional + clean URLs 200, genuine 404s preserved. CAD/GBP/AUD localize correctly.
