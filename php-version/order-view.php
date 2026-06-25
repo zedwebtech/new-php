@@ -79,7 +79,7 @@ include __DIR__ . '/includes/admin-shell.php';
     <a href="javascript:void(0)" onclick="if(document.referrer && document.referrer.indexOf(location.host) !== -1){history.back();} else {location.href='admin.php?tab=orders';}" class="text-decoration-none small" data-testid="back-btn"><i class="bi bi-arrow-left"></i> Back</a>
     <h1 class="h4 fw-bold mb-0 mt-1" data-testid="order-title">Order #<?= esc($o['order_number']) ?>
       <?php $oMode = $o['gw_mode'] ?? 'live'; if ($oMode === 'test'): ?>
-        <span class="badge ms-2" data-testid="order-mode-badge" style="background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;font-size:11px;letter-spacing:1.2px;vertical-align:middle;"><i class="bi bi-flask me-1"></i>TEST</span>
+        <span class="badge ms-2" data-testid="order-mode-badge" style="background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;font-size:11px;letter-spacing:1.2px;vertical-align:middle;"><i class="bi bi-eyedropper me-1"></i>TEST</span>
       <?php else: ?>
         <span class="badge ms-2" data-testid="order-mode-badge" style="background:rgba(16,185,129,.12);color:#10b981;font-size:11px;letter-spacing:1.2px;vertical-align:middle;border:1px solid rgba(16,185,129,.35);"><i class="bi bi-broadcast me-1"></i>LIVE</span>
       <?php endif; ?>

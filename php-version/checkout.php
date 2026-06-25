@@ -375,7 +375,7 @@ include __DIR__ . '/includes/header.php';
     <div class="alert alert-warning small mb-3 d-flex align-items-start gap-2"
          data-testid="checkout-test-mode-banner"
          style="border-radius:12px;line-height:1.5;font-weight:600;border:1px solid #f59e0b;background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(234,88,12,.08));">
-      <i class="bi bi-flask text-warning mt-1" style="font-size:18px;"></i>
+      <i class="bi bi-eyedropper text-warning mt-1" style="font-size:18px;"></i>
       <div class="flex-grow-1">
         <span class="badge bg-warning text-dark me-1" style="font-size:10.5px;letter-spacing:1px;">TEST MODE</span>
         Payments are not charged in this environment.  The order will be created and emails will be delivered, but no real money moves. Switch to <a href="/admin.php?tab=api&gw=toggles" class="alert-link">Live</a> from Admin → API to start processing real payments.

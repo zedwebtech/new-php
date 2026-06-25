@@ -8651,7 +8651,7 @@ elseif ($tab === 'orders'):
               <strong>#<?= esc($o['order_number']) ?></strong>
               <span class="s-badge <?= esc($o['status']) ?> text-capitalize ms-1" style="font-size:10px;"><?= esc($o['status']) ?></span>
               <?php if (($o['gw_mode'] ?? 'live') === 'test'): ?>
-                <span class="badge ms-1" data-testid="order-mode-pill-<?= (int)$o['id'] ?>" style="background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;font-size:9px;letter-spacing:1px;padding:2px 6px;"><i class="bi bi-flask me-1"></i>TEST</span>
+                <span class="badge ms-1" data-testid="order-mode-pill-<?= (int)$o['id'] ?>" style="background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;font-size:9px;letter-spacing:1px;padding:2px 6px;"><i class="bi bi-eyedropper me-1"></i>TEST</span>
               <?php endif; ?>
               <br><small class="text-muted"><?= esc(date('M j, Y · H:i', strtotime($o['created_at']))) ?></small>
             </td>
@@ -11568,7 +11568,7 @@ elseif ($tab === 'api'):
             <?php if ($modeLive): ?>
               <i class="bi bi-shield-fill-check text-success me-1"></i>Real customer payments are being processed and funds are being charged through the active gateway.
             <?php else: ?>
-              <i class="bi bi-flask text-warning me-1"></i>Sandbox / test environment — orders are created and the full payment flow runs end-to-end, but no real money moves.  Use this to verify callbacks, webhooks, order creation and email delivery before going live.
+              <i class="bi bi-eyedropper text-warning me-1"></i>Sandbox / test environment — orders are created and the full payment flow runs end-to-end, but no real money moves.  Use this to verify callbacks, webhooks, order creation and email delivery before going live.
             <?php endif; ?>
           </small>
         </div>
@@ -11869,7 +11869,7 @@ elseif ($tab === 'api'):
               <div class="col-md-6">
                 <div class="card-e p-3 h-100" style="border:2px solid <?= $isLiveNow ? '#e5e7eb' : '#f59e0b' ?>;background:<?= $isLiveNow ? 'transparent' : 'rgba(245,158,11,.04)' ?>;">
                   <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-flask me-1" style="color:#f59e0b;"></i> Test / Sandbox keys</h6>
+                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-eyedropper me-1" style="color:#f59e0b;"></i> Test / Sandbox keys</h6>
                     <?php if (!$isLiveNow): ?><span class="badge" style="background:#f59e0b;color:#fff;font-size:9.5px;letter-spacing:1px;">ACTIVE</span><?php endif; ?>
                   </div>
                   <small class="text-muted d-block mb-2" style="font-size:11px;">Paste your Stripe <code>sk_test_*</code> keys.</small>
@@ -11927,7 +11927,7 @@ elseif ($tab === 'api'):
               <div class="col-md-6">
                 <div class="card-e p-3 h-100" style="border:2px solid <?= $isLiveNow ? '#e5e7eb' : '#f59e0b' ?>;background:<?= $isLiveNow ? 'transparent' : 'rgba(245,158,11,.04)' ?>;">
                   <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-flask me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
+                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-eyedropper me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
                     <?php if (!$isLiveNow): ?><span class="badge" style="background:#f59e0b;color:#fff;font-size:9.5px;letter-spacing:1px;">ACTIVE</span><?php endif; ?>
                   </div>
                   <small class="text-muted d-block mb-2" style="font-size:11px;">From sandbox.authorize.net.</small>
@@ -11966,7 +11966,7 @@ elseif ($tab === 'api'):
               <div class="col-md-6">
                 <div class="card-e p-3 h-100" style="border:2px solid <?= $isLiveNow ? '#e5e7eb' : '#f59e0b' ?>;background:<?= $isLiveNow ? 'transparent' : 'rgba(245,158,11,.04)' ?>;">
                   <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-flask me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
+                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-eyedropper me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
                     <?php if (!$isLiveNow): ?><span class="badge" style="background:#f59e0b;color:#fff;font-size:9.5px;letter-spacing:1px;">ACTIVE</span><?php endif; ?>
                   </div>
                   <label class="form-label small mb-0">Security Key (test) <small class="text-muted"><?= esc(mask($nmiKeyT)) ?></small></label>
@@ -12012,7 +12012,7 @@ elseif ($tab === 'api'):
               <div class="col-md-6">
                 <div class="card-e p-3 h-100" style="border:2px solid <?= $isLiveNow ? '#e5e7eb' : '#f59e0b' ?>;background:<?= $isLiveNow ? 'transparent' : 'rgba(245,158,11,.04)' ?>;">
                   <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-flask me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
+                    <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-eyedropper me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
                     <?php if (!$isLiveNow): ?><span class="badge" style="background:#f59e0b;color:#fff;font-size:9.5px;letter-spacing:1px;">ACTIVE</span><?php endif; ?>
                   </div>
                   <label class="form-label small mb-0">API Endpoint URL</label>
@@ -12142,7 +12142,7 @@ elseif ($tab === 'api'):
             <div class="col-md-6">
               <div class="card-e p-3 h-100" style="border:2px solid <?= $isLiveNow ? '#e5e7eb' : '#f59e0b' ?>;background:<?= $isLiveNow ? 'transparent' : 'rgba(245,158,11,.04)' ?>;">
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                  <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-flask me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
+                  <h6 class="fw-bold mb-0" style="font-size:13.5px;"><i class="bi bi-eyedropper me-1" style="color:#f59e0b;"></i> Sandbox credentials</h6>
                   <?php if (!$isLiveNow): ?>
                     <span class="badge" style="background:#f59e0b;color:#fff;font-size:9.5px;letter-spacing:1px;">ACTIVE</span>
                   <?php endif; ?>

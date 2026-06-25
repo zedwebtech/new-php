@@ -1333,7 +1333,7 @@ hr { border-color: var(--border); opacity:.5; }
     <?php if ($gwModeNow !== 'live'): ?>
       <a href="?tab=api&gw=toggles" class="adm-pill" title="Currently in Test mode — no real payments are processed. Click to switch to Live." data-testid="adm-gw-mode-pill"
          style="background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;font-weight:700;letter-spacing:.8px;text-transform:uppercase;font-size:11px;border:0;">
-        <i class="bi bi-flask"></i> Test mode
+        <i class="bi bi-eyedropper"></i> Test mode
       </a>
     <?php else: ?>
       <a href="?tab=api&gw=toggles" class="adm-pill" title="Live mode — real payments are being processed." data-testid="adm-gw-mode-pill"
