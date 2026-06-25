@@ -1,0 +1,8 @@
+# Prevent any uploaded file from being executed as PHP/CGI/script.
+# Apache will serve everything here as a static download / image only.
+<FilesMatch "\.(php|phtml|phps|cgi|pl|py|jsp|asp|sh|exe)$">
+    Require all denied
+</FilesMatch>
+Options -ExecCGI
+RemoveHandler .php .phtml
+AddType text/plain .php .phtml .php5 .php7 .pht

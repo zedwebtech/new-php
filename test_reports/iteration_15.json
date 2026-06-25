@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 15 — retested the two HIGH bugs from iteration_14 plus the full ad-readiness regression suite. Bug 1 (Organization sameAs always emitted) is FIXED for the dormant/default state — sameAs is now present as ['http://localhost:3000/about-us.php'] when no socials are configured. Bug 2 (save_tracking_ids preserves valid values on invalid input) is FIXED — DB inspection confirms ga4='G-TEST123ABC' and uet='12345678' are preserved when 'not-a-tag'/'abc' are submitted, and the flash banner [data-testid='tracking-flash'] correctly emits 'Saved with 2 invalid ID(s) ignored: ga4_measurement_id, bing_uet_tag_id'. Regression: 17/17 iteration_14 cases still green. NEW finding: the 'real twitter URL replaces fallback' assertion FAILS because $co['twitter'/'facebook'/'linkedin'/'instagram'] is never populated by company_info() and header.php never reads those keys directly — the fallback always wins. 19/20 pytest cases pass; the 1 failure is on the (newly written) twitter-overrides-fallback case which exposes a wiring gap NOT covered by the original Bug 1 fix.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET / (Organization JSON-LD sameAs)", "issue": "Seeding settings(k='twitter', v='https://twitter.com/maventechsoftware') does NOT replace the about-us.php fallback in sameAs. Root cause: includes/settings.php company_info() (lines 107-117) does not expose 'twitter'/'facebook'/'linkedin'/'instagram' keys, and includes/header.php line ~353-358 reads $co['twitter']..$co['instagram'] which are always null. The header comment claims 'Once real social URLs are pasted into Admin → Company Info, those replace the fallback automatically' — but there is currently no wiring from settings table → $co for those four keys. Bug 1 fix (always-present fallback) is correct; the social-URL override path is the unimplemented half. Fix: extend company_info() to include 'twitter'/'facebook'/'linkedin'/'instagram' from setting_get(), and/or read them directly in header.php instead of via $co."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_ads_readiness.py",
+    "/app/test_reports/pytest/ads_results_iter15.xml"
+  ],
+  "action_items": [
+    "MINOR: wire settings table → company_info() (or header.php) for 'twitter'/'facebook'/'linkedin'/'instagram' so the about-us.php fallback can be replaced when an admin seeds real social URLs. Without this, the comment in header.php (~line 351 'Once real social URLs are pasted into Admin → Company Info, those replace the fallback automatically') is misleading. Suggested patch: add the 4 keys to includes/settings.php company_info() via setting_get('twitter','') etc., OR pull them in header.php directly with `setting_get('twitter','')` and pass them into the sameAs array_filter()."
+  ],
+  "critical_code_review_comments": [
+    "Bug 1 fix (includes/header.php ~line 353-358) is correct and minimal — uses `array_values(array_filter([...])) ?: [site_url() . '/about-us.php']` so an empty filtered list still surfaces a valid Schema.org sameAs entry. Survives the outer array_filter() because a single-element array is truthy.",
+    "Bug 2 fix (admin.php save_tracking_ids, ~line 902-909) is correct: per-key loop validates BEFORE setting_set, uses `continue` on regex failure to skip the write, accumulates rejected keys, then emits a clear flash with the count and key list. Verified via direct DB read AND HTML flash inspection after authenticated POST.",
+    "Unimplemented wiring for social URLs (see minor issue above) — silent integration gap because the header comment implies functionality that does not exist."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_ads_readiness.py (added TestBug1SameAsFallback + TestBug2TrackingPreservation classes; 3 new test methods)"
+  ],
+  "success_rate": {"backend": "95% (19/20)", "frontend": "n/a (backend-only retest)"},
+  "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! — login flow at /login.php POST {email,password} redirects to /admin.php?tab=dashboard; PHPSESSID cookie persists. Confirmed working end-to-end.",
+  "seed_data_creation": "Temporarily set settings(twitter='https://twitter.com/maventechsoftware') and the 5 tracker keys (ga4='G-TEST123ABC', uet='12345678', ads='AW-9999999999', label='aBcDeFgH123', clarity='clartestxx') during their respective tests; all were cleaned up. Final state verified via mysql: twitter row deleted, all 5 tracker rows blank.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Bug 1 (sameAs fallback) and Bug 2 (tracking preservation) are both verified FIXED via /app/backend/tests/test_ads_readiness.py — 19/20 pytest cases green. The 1 failure (test_sameAs_uses_real_socials_when_seeded) is a NEW finding about a missing wiring layer between the settings table and company_info() for social URLs — it is NOT a regression of the iteration_14 bug. The Bug 2 test uses a requests.Session() with /login.php POST to obtain PHPSESSID, then POSTs to /admin.php?tab=company with action=save_tracking_ids — pattern is reusable for any future authenticated-admin pytest. Cleanup is idempotent (DELETE FROM settings WHERE k='twitter' restores dormant state).",
+  "rca of the issue": "Bug 1 (sameAs missing) RCA: solved via includes/header.php fallback `?: [site_url() . '/about-us.php']` — confirmed valid Schema.org sameAs entry now serialised on the empty-socials default. Bug 2 (overwrite-on-invalid) RCA: solved via admin.php save_tracking_ids loop that calls preg_match BEFORE setting_set and uses `continue` on regex failure — direct mysql query confirms valid values are preserved after an invalid POST, and the flash banner lists the rejected keys. New finding RCA: settings keys 'twitter'/'facebook'/'linkedin'/'instagram' are never read into $co (company_info() omits them, header.php only reads them via $co), so the override path advertised in the header comment is non-functional. Mitigation: extend company_info() in /app/php-version/includes/settings.php to expose those 4 keys via setting_get()."
+}

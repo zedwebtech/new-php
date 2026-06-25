@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 11 — g:sale_price_effective_date acceptance testing for the Google Merchant Center feed. 24/24 pytest assertions pass (4 new + 20 regression). Sale-effective-date interval is emitted for every <g:sale_price> (37/37 items), is ISO-8601 compliant (YYYY-MM-DDTHH:MM+00:00/YYYY-MM-DDTHH:MM+00:00), and defaults to a rolling 30-day window anchored on today UTC when sale_starts_at/sale_ends_at are NULL. DB override end-to-end confirmed: pinning product id=2 to 2026-04-01..2026-04-30 produced exactly that interval for id=2 and left every other item on the rolling window; clearing the columns reverted to rolling. Admin Edit Product modal renders the collapsible '<i bi-calendar-event> Optional: Pin sale window for Google Shopping' <details>, with both datetime-local inputs carrying data-testid='product-sale-starts-input' / 'product-sale-ends-input'. UI save + reload showed 2026-05-01T00:00 / 2026-05-31T23:59 persisted; UI clear + reload showed both fields empty and DB columns NULL. All iteration-10 regression assertions still hold: 5/5 feed aliases 200 application/xml, 37 items, every <g:link> on the public host returns HTTP 200, robots.txt lists both sitemaps with the public host, ORIGIN headers still 'Cache-Control: public, max-age=3600' + X-Robots-Tag noindex,nofollow with no Pragma/Expires/Set-Cookie.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_google_merchant_feed.py",
+    "/app/test_reports/pytest/iter11_feed.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "_sale_effective_date_range() in merchant-feed.php correctly handles the three states: (a) both columns set + end>start => pinned window, (b) malformed input => silently falls through to rolling, (c) NULL/NULL => rolling 30-day. Output format YYYY-MM-DDTHH:MM+00:00 matches Google's documented requirement exactly.",
+  "ensure_db_schema() additions for sale_starts_at + sale_ends_at are idempotent (the existing column-exists guard pattern in includes/functions.php).",
+    "Admin Edit Product form datetime-local inputs are enhanced by Flatpickr at runtime which replaces the underlying <input type='datetime-local'> with type='hidden' + a visible alt input — this is purely cosmetic; the hidden input retains the data-testid and is what the form POSTs, so the existing data-testid contract is preserved.",
+    "minor — the <details> in admin.php is rendered open=false on initial load; submitted values still apply because Flatpickr binds before the <details> is expanded. Consider opening <details open> when either column has a non-empty value so an existing pinned window is visible to the admin without an extra click. Not a blocker."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_google_merchant_feed.py (added 4 new tests: test_sale_effective_date_count_matches_sale_price, test_sale_effective_date_format_and_rolling_window, test_admin_pinned_window_overrides_rolling_for_id2, test_admin_form_has_sale_window_inputs)"
+  ],
+  "success_rate": {"backend": "100% (24/24 pytest)", "frontend": "100% (admin save+clear cycle verified via Playwright on the preview host)"},
+  "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None persistent. test_admin_pinned_window_overrides_rolling_for_id2 transiently sets sale_starts_at/sale_ends_at on product id=2 and unconditionally NULLs them in a finally: block. The Playwright UI test similarly pins+clears product id=1. Final DB state at end of iteration: every product has sale_starts_at=NULL and sale_ends_at=NULL (verified).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The full feed regression + sale-effective-date tests live in /app/backend/tests/test_google_merchant_feed.py (24 tests, 7.4s). Run them with: pytest /app/backend/tests/test_google_merchant_feed.py --tb=short. Two of the new tests touch the DB (write+rollback) — they're safe to re-run and idempotent. ORIGIN URL is hardcoded as http://localhost:3000 so origin-only Cache-Control assertions bypass the preview Cloudflare layer that rewrites public responses to 'Cache-Control: no-store' + injects __cf_bm cookie (environmental artifact only, documented in iter10).",
+  "rca of the issue": "N/A — no defects found in this iteration. The implementation matches the spec: (1) rolling 30-day window anchored on today UTC when both columns NULL, (2) admin-pinned window when both columns set and end>start, (3) per-product override does not affect other items, (4) admin form persists both fields with the documented data-testid selectors, (5) all prior feed regression behaviour preserved."
+}

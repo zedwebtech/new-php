@@ -1,0 +1,48 @@
+{
+  "summary": "Tested the production-domain rendering fix (to_public_url + setting_get auto-heal + setup-check hygiene card) on the PHP storefront. Core promise — zero Emergent preview URLs leaking into the public HTML when served on Host=maventechsoftware.com — is FULLY MET. 17/19 pytest assertions PASS. The 1 FAIL exposes two real bugs in the new admin hygiene card (setup-check.php) that prevent the 'Strip preview hostnames now' workflow from being usable end-to-end, even though the auto-heal layer makes the public site clean regardless.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/setup-check.php?fix=public_urls (POST)",
+        "issue": "Two bugs prevent the 'Strip preview hostnames now' button from working as advertised:\n(1) The POST handler runs AFTER `include __DIR__.'/includes/admin-shell.php'` has already emitted HTML, so `header('Location: setup-check.php?cleaned=N')` cannot fire — response is HTTP 200 (not 302) and the user sees the same warning page with no feedback. The DB cleanup of main_url/site_domain_url/company_logo DOES happen (PDO UPDATEs run before the failed header() call), but the user has no way to know.\n(2) The detection query `SELECT k,v FROM settings WHERE v LIKE '%preview.emergentagent.com%'` matches NON-URL settings — e.g. the JSON blob in `seo_health_probe_cache` which embeds a sitemap URL. The fix loop tries to clean such rows with `preg_replace('~^https?://[^/]*\\.preview\\.emergentagent\\.com~i', '', $v)` which is anchored at `^` and therefore can't strip a preview URL embedded inside a JSON string. Net effect: even after the operator clicks the button and reloads, the warning never disappears because `seo_health_probe_cache` keeps matching the LIKE filter. The 'No preview URLs leaking' green message is therefore unreachable in practice."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_public_domain_hygiene.py",
+    "/app/test_reports/pytest/public_domain_hygiene.xml"
+  ],
+  "action_items": [
+    "In /app/php-version/setup-check.php: move the `if (($_GET['fix'] ?? '') === 'public_urls' && POST)` handler ABOVE `include __DIR__.'/includes/admin-shell.php'` (line 101), and re-query $leakyRows AFTER the fix runs so the warning table reflects the cleaned state on the same response. That restores the 302 redirect to ?cleaned=N.",
+    "Tighten the leaky-row detection so non-URL settings cannot be picked up: either restrict the query to `WHERE k IN ('main_url','site_domain_url','company_logo','site_url','public_url','base_url') AND v LIKE '%preview.emergentagent.com%'`, OR scan only known URL-shaped keys (the same allowlist already used inside setting_get). This will also remove `seo_health_probe_cache` from the warning table, which is a JSON cache row that the user should never have seen.",
+    "Optional polish: replace the anchored regex in the 'else' branch of the fix loop with an UNANCHORED `preg_replace('~https?://[^/\\s\"\\']*\\.preview\\.emergentagent\\.com~i', '', $v)` so it can also wipe preview URLs embedded inside JSON-shaped cache values, in case future settings store them. Combined with the allowlist above, this is belt-and-suspenders."
+  ],
+  "critical_code_review_comments": [
+    "Auto-heal layer (setting_get + to_public_url) is well-implemented: gated on (a) URL-shaped allowlist, (b) host is preview, (c) current host is non-preview. Preview-context control test PASSES — visiting the site with Host=show-live-7.preview.emergentagent.com still renders preview links, so the rewrite never clobbers dev workflows.",
+    "config.php SITE_URL fallback correctly defaults to empty string — verified no hard-coded preview URL.",
+    "order-success.php QR data-url correctly resolves to https://maventechsoftware.com/order-history.php?... when served on prod host. The shift from cached site_domain_url to site_url() is the right call.",
+    "Company logo on / under Host=maventechsoftware.com renders as https://maventechsoftware.com/uploads/company/logo-356b9f03.png (rewritten from stage-show-2.preview.emergentagent.com on the fly). Image is reachable.",
+    "Bug 1 (setup-check redirect): the existing pattern in other admin POST handlers is to either ob_start() at the top of the file, or run mutations before any HTML is emitted. Either fix is acceptable; moving the handler above the include is the smallest diff.",
+    "Bug 2 (leaky-row over-detection): keep the allowlist of URL keys in sync between setting_get() and setup-check.php. Currently setting_get has 6 keys ['main_url','site_domain_url','company_logo','site_url','public_url','base_url'] but setup-check uses an unrestricted LIKE. Extract the allowlist to a single function (e.g. url_shaped_setting_keys(): array) and call it from both."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_public_domain_hygiene.py (new, 220 lines, 19 parametrised tests covering 13 public pages + QR + logo + nav + preview-context + checkout regression + admin hygiene flow)"
+  ],
+  "success_rate": {
+    "backend": "89% (17/19 PASS, 1 FAIL on admin hygiene fix-button workflow, 1 SKIP on checkout end-to-end where the test couldn't auto-discover product_id from product.php markup — unrelated to the fix under review)",
+    "frontend": "n/a (curl-based simulation of Host=maventechsoftware.com is the documented way per the review request)"
+  },
+  "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! — used for setup-check.php hygiene-card test.",
+  "seed_data_creation": "Restored the original 3 leaky rows in `settings` table at the end of the run so the main agent can reproduce the bug: main_url='https://show-live-7.preview.emergentagent.com', site_domain_url='https://show-live-7.preview.emergentagent.com', company_logo='https://stage-show-2.preview.emergentagent.com/uploads/company/logo-356b9f03.png'.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent fixes the two setup-check.php bugs above, re-run `pytest backend/tests/test_public_domain_hygiene.py -v`. The single failing test is test_setup_check_shows_hygiene_card_when_leaks_exist_then_fix_clears_them. All 13 public-page leak tests already PASS — those exercise the auto-heal layer which is the actual customer-facing fix and is solid. The skipped checkout regression test is a test-script limitation (could not parse product_id from product page markup); the main checkout flow was already validated in iteration_1.",
+  "rca of the issue": "Bug 1 — setup-check.php emits HTML via admin-shell.php at line 101, then renders the hygiene card (lines 103-144), THEN at line 148 tries to run a POST handler that calls header(Location). PHP cannot send headers after body output, so the redirect silently fails and the response is HTTP 200 with no user-visible confirmation. Repro: POST /setup-check.php?fix=public_urls with admin cookies → 200 (expected 302) → reload setup-check.php → warning still shows because of Bug 2.\n\nBug 2 — the leaky-row SELECT has no WHERE clause restricting keys, so it pulls in non-URL JSON-blob rows like seo_health_probe_cache. Those rows hit the `else` branch of the fix loop where preg_replace is anchored to `^https?://...preview...`, which can never match a preview URL embedded inside a JSON string. So the row is rewritten to itself (no change) and continues to match the LIKE filter on every subsequent request. Net: the green 'No preview URLs leaking' state is unreachable for any DB that has ever had its sitemap probed.\n\nMitigation: (a) move POST handler above the admin-shell include, (b) restrict the SELECT to an allowlist of URL keys (same allowlist used in setting_get auto-heal), (c) optionally drop the `^` anchor in preg_replace. Verified the public-facing auto-heal is unaffected by both bugs — all 13 public pages render with zero preview URLs on Host=maventechsoftware.com even with the leaky rows in place."
+}

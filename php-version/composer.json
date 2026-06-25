@@ -1,0 +1,6 @@
+{
+    "require": {
+        "dompdf/dompdf": "^3.0",
+        "chillerlan/php-qrcode": "^6.0"
+    }
+}

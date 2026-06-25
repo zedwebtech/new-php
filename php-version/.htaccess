@@ -1,0 +1,145 @@
+# =============================================================================
+# Maventech Admin Panel — Apache hardening (cPanel / Plesk / shared hosting)
+# =============================================================================
+
+# ---- Force UTF-8 ----
+AddDefaultCharset UTF-8
+
+# ---- Block direct access to sensitive files ----
+<FilesMatch "^(database\.sql|start\.sh|seed-templates\.php|router\.php|composer\.(json|lock))$">
+    Require all denied
+</FilesMatch>
+
+# ---- Block dotfiles and backup files ----
+<FilesMatch "^\.(env|git|htaccess|htpasswd|DS_Store)|~$|\.bak$|\.old$|\.swp$">
+    Require all denied
+</FilesMatch>
+
+# ---- Block direct access to the includes/ and lib/ directories ----
+RedirectMatch 404 ^/includes/
+RedirectMatch 404 ^/lib/
+RedirectMatch 404 ^/vendor/
+
+# ---- Block raw access to customer-PII PDFs (receipts/invoices).
+#      These must only be served via order-history.php which checks
+#      the email + order-number session unlock. ----
+RewriteEngine On
+RewriteRule ^uploads/order-pdfs/.* - [F,L]
+
+# ---- Pretty SEO endpoints — proxy /sitemap.xml, /merchant-feed.xml, /llms.txt,
+#      /robots.txt and /ai.txt through their PHP generators so they always
+#      reflect the live host + catalogue + company info. ----
+RewriteRule ^sitemap\.xml$        sitemap-xml.php   [L]
+RewriteRule ^merchant-feed\.xml$  merchant-feed.php [L]
+RewriteRule ^llms\.txt$           llms-txt.php      [L]
+RewriteRule ^agents\.json$        agents-json.php   [L]
+RewriteRule ^robots\.txt$         robots-txt.php    [L]
+RewriteRule ^ai\.txt$             ai-txt.php        [L]
+
+# ---- Google Merchant + Bing Shopping feed aliases — mirror router.php so all
+#      the well-known feed URLs that the Live SEO Health Check links to
+#      resolve on Apache too (cPanel / shared hosting).  Without these the
+#      /feed/google-products.xml link in the admin panel returns 404 on
+#      production even though it works locally behind the dev router. ----
+RewriteRule ^feed/google-products\.xml$        merchant-feed.php [L,QSA]
+RewriteRule ^feeds/google-products\.xml$       merchant-feed.php [L,QSA]
+RewriteRule ^google-merchant-feed\.xml$        merchant-feed.php [L,QSA]
+RewriteRule ^google-shopping-feed\.xml$        merchant-feed.php [L,QSA]
+RewriteRule ^feed/bing-shopping\.xml$          merchant-feed.php [L,QSA]
+RewriteRule ^feeds/bing-shopping\.xml$         merchant-feed.php [L,QSA]
+RewriteRule ^bing-shopping-feed\.xml$          merchant-feed.php [L,QSA]
+RewriteRule ^microsoft-merchant-feed\.xml$     merchant-feed.php [L,QSA]
+
+# ---- Pretty CONTENT endpoints — mirror router.php so extensionless URLs
+#      (press-kit, embed, hub, manifest, OG images) work on Apache too.
+#      Without these, /press-kit etc. 404 on the live domain even though
+#      they work behind the dev router. ----
+RewriteRule ^press-kit/?$                        press-kit.php             [L,QSA]
+RewriteRule ^embed/badge(\.js)?$                 embed-badge.php           [L,QSA]
+RewriteRule ^embed/?$                            press-kit.php             [L,QSA]
+RewriteRule ^hub/([a-z0-9\-]+)/?$                hub.php?topic=$1          [L,QSA]
+RewriteRule ^manifest(\.webmanifest|\.json)?$    manifest-webmanifest.php  [L,QSA]
+RewriteRule ^og-default\.(png|jpe?g)$            og-default.php            [L,QSA]
+RewriteRule ^og-product\.(png|jpe?g)$            og-product.php            [L,QSA]
+
+# ---- Generic extensionless → .php fallback.  Any /foo that has a matching
+#      foo.php file (and isn't a real file/dir) is served from it.  This
+#      keeps every clean URL working on the live server. ----
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+RewriteRule ^([a-zA-Z0-9_\-/]+?)/?$ $1.php [L,QSA]
+
+# ---- Canonical-host 301 redirect (www ↔ naked).  SEO audit tools flag a
+#      site when both http(s)://example.com and http(s)://www.example.com
+#      serve the same content without redirecting, because inbound links
+#      get split across hosts.  Set ENV `SEO_CANONICAL_HOST` to either
+#      'naked' (default) or 'www' to flip the preference site-wide.
+#      ---------------------------------------------------------------- */
+SetEnvIfNoCase Host ^www\. IS_WWW=1
+# Default: redirect www → naked
+RewriteCond %{ENV:SEO_CANONICAL_HOST} !=www
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+# Opposite: redirect naked → www when SEO_CANONICAL_HOST=www
+RewriteCond %{ENV:SEO_CANONICAL_HOST} =www
+RewriteCond %{HTTP_HOST} !^www\. [NC]
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+)(:|$) [NC]
+RewriteRule ^ https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ---- Disable PHP / shell execution inside uploads/ ----
+<Directory "uploads">
+    <FilesMatch "\.(php|phtml|phar|sh|cgi|pl)$">
+        Require all denied
+    </FilesMatch>
+</Directory>
+
+# ---- Security headers ----
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+</IfModule>
+
+# ---- Disable directory listing ----
+Options -Indexes
+
+# ---- Pretty error page for 404 ----
+ErrorDocument 404 /404.php
+
+# ---- Gzip compression ----
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json text/xml application/xml application/rss+xml image/svg+xml text/plain
+</IfModule>
+
+# ---- Static-asset cache (1 year) ----
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png  "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/avif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# ---- Immutable Cache-Control for hashed/versioned static assets ----
+# We append ?v=<filemtime> to every CSS/JS we ship, so it's safe to tell
+# browsers + CDNs to hold the response for a year without re-validation.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|woff2|woff|ttf|otf|eot|jpg|jpeg|png|webp|avif|svg|ico|gif)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    # Discovery files refreshed daily — short cache window.
+    <FilesMatch "^(llms\.txt|agents\.json|sitemap\.xml|merchant-feed\.xml|robots\.txt)$">
+        Header set Cache-Control "public, max-age=3600, must-revalidate"
+    </FilesMatch>
+</IfModule>

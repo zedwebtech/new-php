@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 14 — exercised the 4-phase ad-readiness sprint (Phase A SEO/JSON-LD, Phase B placeholder tracking stack + admin form, Phase C deferred JS + lazy-load runtime, Phase D About-page E-E-A-T) plus the iteration_13 feed regression. 16/17 backend pytest cases pass and the Playwright admin form/about-page UI tests confirm the tracking-card and FAQ accordion work end-to-end. Two functional bugs and one minor copy/UX gap were found and are documented below. All 5 tracking settings have been reset to empty at the end of the run — dormant state verified (0 pixel fragments in /).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET / (Organization JSON-LD)", "issue": "Organization @graph entry is missing the required `sameAs` array. The header builds it from $co['twitter'|'facebook'|'linkedin'|'instagram'] (lines ~346-351 of includes/header.php). DB has none of those keys set, so after `array_filter` the array is empty and the outer `array_filter` strips the field entirely. Spec requires sameAs to be present (even if empty / placeholder URLs) for Google Ads trust signals. Either (a) seed default social profile URLs in the settings table, or (b) emit `sameAs => []` unconditionally (do not strip empties for that key).", "priority": "HIGH"},
+      {"endpoint": "POST admin.php?tab=company (save_tracking_ids)", "issue": "Invalid IDs handler does NOT preserve previously valid values. Submitted ga4='not-a-tag' + uet='abc' while ga4 already held 'G-TEST123ABC' and uet held '12345678'. After save, the DB/form fields BOTH show the new (invalid) raw strings — the previous valid values were wiped. The flash banner also did not contain the string 'invalid' (Playwright body-text check returned False). Spec: 'flash mentions invalid ID(s) ignored' AND previous valid values must be preserved. Fix point: admin.php ~line 890 save_tracking_ids POST handler — only overwrite the DB value when the new submitted value passes the regex (or is intentionally empty); otherwise keep the existing setting and append the failed key to the flash.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "Microsoft Clarity tag rendering", "issue": "The Clarity bootstrap snippet builds the script URL via runtime concat: `t.src = 'https://www.clarity.ms/tag/' + i;` where `i` is passed as a literal arg. So the exact substring 'clarity.ms/tag/<id>' is NOT present in the rendered HTML — only the fragments 'clarity.ms/tag/' and the bare project id are. This matches Microsoft's official boilerplate but means a strict grep for the joined URL fails. Cosmetic — pixel still fires correctly at runtime. Test was loosened to assert both substrings separately."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Admin → SEO & Tracking → save with invalid IDs", "issue": "Invalid values overwrite previously valid stored values; flash banner does not warn the admin that the bad IDs were rejected. User-facing risk: an admin pastes a mistyped ID, hits save, and silently loses their working pixel.", "affected_selectors": ["[data-testid='tk-ga4-input']", "[data-testid='tk-uet-input']", "[data-testid='tracking-card']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ads_readiness.py",
+    "/app/test_reports/pytest/ads_results.xml"
+  ],
+  "action_items": [
+    "FIX (HIGH): includes/header.php Organization JSON-LD — guarantee `sameAs` is always emitted (either seed default social URLs in settings or skip the array_filter for that key so an empty list still serialises).",
+    "FIX (HIGH): admin.php save_tracking_ids handler — when a submitted ID fails its regex, keep the existing DB value instead of overwriting with the rejected string, and surface a flash like 'Tracking IDs saved — invalid ID(s) ignored: ga4_measurement_id, bing_uet_tag_id'.",
+    "NICE-TO-HAVE: standardise on `https://www.clarity.ms/tag/{ID}` literal in the snippet (or document the runtime-concat pattern so future regex grep audits don't false-alarm).",
+    "Optional: consider rendering `sameAs: []` server-side ONLY if no socials are configured, and adding a `?social_*` UI in admin → company so the admin can actually populate Twitter/LinkedIn/etc. — this is also good E-E-A-T signal."
+  ],
+  "critical_code_review_comments": [
+    "header.php — `array_filter` strips ANY falsy value including empty arrays and zero. Multiple required Schema.org fields (sameAs, contactPoint, knowsAbout, taxID, etc.) are individually guarded with `?: null` and then stripped — this works for most cases but means the schema silently degrades when DB columns are missing. Suggest adding a self-check log or a structured-data-test pytest that catches dropped fields like sameAs.",
+    "admin.php save_tracking_ids POST handler should validate-then-write per-key in a loop and accumulate rejected keys for the flash. Current behaviour (overwrite then validate, or no per-key fallback) loses good data on a single bad paste.",
+    "Footer lazy-load runtime correctly applies `loading='lazy'` to below-fold images and `fetchPriority='high'` to the first hero image — verified via Playwright (firstFetchPriority='high', a below-fold .webp had loading='lazy'). Good Core Web Vitals setup.",
+    "Bootstrap bundle + assets/js/main.js both `<script defer>` confirmed. FAQ accordion works correctly under deferred Bootstrap (q-2 click toggles #aboutFaqQ2.show and removes .show from #aboutFaqQ0)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_ads_readiness.py (NEW — 17 test cases covering Phases A/B/C/D + feed regression)",
+    "/app/test_reports/pytest/ads_results.xml (JUnit XML)"
+  ],
+  "success_rate": {"backend": "94% (16/17)", "frontend": "Admin form save + chips + pixels emit on / = OK; About-page Trust/FAQ + accordion behaviour = OK; lazy-load + fetchPriority = OK. Invalid-ID preservation = BROKEN (1 flow)."},
+  "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! (from /app/memory/test_credentials.md). Login lands on /admin.php?tab=dashboard as expected.",
+  "seed_data_creation": "Temporary settings rows set during testing: ga4_measurement_id, google_ads_tag_id, google_ads_purchase_label, bing_uet_tag_id, clarity_project_id (with G-TEST123ABC / AW-9999999999 / AW-1234567890+aBcDeFgH123 / 87654321+12345678 / clarTest01+clartestxx). All 5 keys have been blanked back to '' at end of run; products.sale_ends_at was temporarily set to '2026-08-15 23:59:00' and reverted to NULL.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Settings table now has ALL 5 tracker keys present (previously some were missing) with empty values — dormant state preserved. Use `mysql -uroot ucode_store` to inspect. The pytest suite at /app/backend/tests/test_ads_readiness.py is idempotent: it sets/unsets settings and reverts products.sale_ends_at within each test. After main agent fixes the 2 HIGH bugs, just re-run `pytest backend/tests/test_ads_readiness.py -v` — expect 17/17 green once sameAs is unconditionally emitted. The admin-form invalid-preservation behaviour is NOT covered by a pytest test (would need session-cookie scraping) — verify manually via the Playwright snippet in iteration_14 conversation thread or build a requests-session-based admin test. Phase A priceValidUntil from sale window, tax-line, dormant-pixel emit, all 4 tracker activations, view_item+begin_checkout(via Bing UET pageview), defer + lazy-load runtime, About-page 6 trust rows + 5 FAQ + FAQPage JSON-LD, and iteration_13 feed (148/37/37 tags) all VERIFIED passing.",
+  "rca of the issue": "Bug 1 RCA (Organization sameAs missing): includes/header.php builds sameAs from optional company social fields ($co['twitter'|'facebook'|'linkedin'|'instagram']) which are not seeded in the settings table. array_filter() on the empty list returns [] (falsy), then the outer array_filter() on the whole Organization dict drops the key entirely. Reproduction: GET / and parse application/ld+json — Organization @graph has no `sameAs` key. Mitigation: either (a) keep `sameAs => []` in the dict even when empty (skip falsy-strip for that one key), or (b) seed default profile URLs into settings(company_twitter/facebook/linkedin) in the schema migration. Bug 2 RCA (admin save_tracking_ids overwrites valid values with invalid input): the POST handler around admin.php:890 currently appears to assign the raw $_POST value into the DB then validate, or skips the rollback path on regex mismatch. Reproduction: open admin.php?tab=company with all 5 fields valid, submit ga4='not-a-tag' + uet='abc' (others unchanged) → flash says 'Tracking IDs saved' with NO 'invalid' callout AND the previously valid ga4='G-TEST123ABC' / uet='12345678' are gone, replaced by 'not-a-tag' / 'abc'. Mitigation: in save_tracking_ids loop, validate each submitted key against its regex BEFORE persisting; on failure keep the existing setting via setting_get() fallback and accumulate a list of rejected keys to append to the flash."
+}

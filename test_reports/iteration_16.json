@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 16 — validated the new _ads_seo() helper in /app/php-version/product.php (lines ~40-87). All 8 spec areas covered by /app/backend/tests/test_product_ads_seo.py: (1) title prefix <=60 chars on 3 products (windows-11-pro, microsoft-office-home-2024-pc, bitdefender-antivirus-for-mac-1-mac-1-year) — PASS; (2) title fallback for long-name product (microsoft-office-home-business-2024-mac uses fallback, windows-11-pro uses long 'Buy ... | ... | $X') — PASS; (3) meta description <=155 chars + all signal words (Buy, genuine, instant, 15-minute, 30-day, money-back guarantee) + 'Save 60% off MSRP' when discounted — PASS (rendered=144 chars); (4) visible H1 = 'Buy Windows 11 Pro — for 1 PC | Lifetime License Key' + canonical-name subtitle 'Windows 11 Pro' — PASS; (5) platform chips for 1 PC / for 1 Mac / for 1 Device — PASS; (6) lifetime licence chip — PASS, subscription SKIPPED (no subscription rows in DB); (7) admin meta_description override still wins — PASS; (8) Product JSON-LD regression (name, sku, brand, offers w/ price/priceCurrency/availability/priceValidUntil/itemCondition, description) — PASS. Full regression: 81 passed / 4 skipped across iter14+iter15+iter16 suites (test_ads_readiness.py + test_google_merchant_feed.py + test_public_domain_hygiene.py + new test_product_ads_seo.py). 14/16 new tests pass, 2 skipped due to data (no subscription products, no zero-discount products in DB). UI screenshot of buy-box confirms H1 + canonical render readably stacked.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/product.php?slug=windows-11-pro <title>", "issue": "Rendered <title> ends with '…' instead of ' | Maventech Software' because seo_clamp_title($pageTitle, 60) chops the appended brand suffix. _ads_seo() builds a 50-char prefix that fits under 60 alone, but header.php appends ' | Maventech Software' (+21 chars) -> 71 chars -> clamped to 60 with ellipsis -> brand suffix lost. Spec is satisfied (prefix <=60) but the brand never appears in <title>; consider passing ad-optimised title through without the brand suffix when prefix is already >= 50 chars, or shorten SITE_BRAND (e.g. 'Maventech') so combined fits."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_product_ads_seo.py",
+    "/app/test_reports/pytest/iter16_ads_seo.xml",
+    "/app/test_reports/pytest/iter16_full.xml"
+  ],
+  "action_items": [
+    "OPTIONAL/MINOR: seo_clamp_title in header.php chops the brand suffix from product <title> because brand 'Maventech Software' (18 chars) + ' | ' (3) cannot fit alongside the 50-char ad-optimised prefix within the 60-char cap. Either (a) skip appending ' | ' + SITE_BRAND for product pages when the prefix is already strong, or (b) use a shorter brand suffix (e.g. 'Maventech') only for the <title> tag. Functional impact is low — Google SERP will see the ad-relevant prefix; brand is missing from the <title> tag itself.",
+    "DATA: products.license_type is 'lifetime' for ALL 37 rows (mysql confirms). The new subscription mapping branch ('1-Year Subscription') is therefore unreachable in production until at least one row's license_type is set to 'subscription'. McAfee/Bitdefender 1-year rows would benefit. Code branch is verified correct by code-review but not exercised by live data."
+  ],
+  "critical_code_review_comments": [
+    "_ads_seo() helper is well-scoped, defensive (casts to float/string), and emits sensible fallbacks (deviceText/licenseChip/title).",
+    "Title fallback chain has 3 tiers: 'Buy {name} | {chip} | {price}' -> '{name} {chip} — {price}' -> '{name} Product Key — {price}'. The middle tier still uses an em-dash so the cut-tail rtrim in seo_clamp_title may strip it. Verified end-to-end OK for current product set.",
+    "Meta description correctly suppresses 'Save N%' when original_price is null/<=price (no fabricated discounts).",
+    "Admin meta_description override path (product.php line ~98) preserved — verified with live UPDATE/SELECT round-trip.",
+    "Canonical name preservation [data-testid='product-canonical-name'] renders below H1 with small text-secondary class — good a11y/SEO compromise."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_product_ads_seo.py (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14 executed; 2 skipped due to DB data)", "frontend": "100% (H1 + canonical verified rendering)"},
+  "test_credentials": "Not required — all public pages.",
+  "seed_data_creation": "None. Test modifies products.meta_description for windows-11-pro and restores to original (NULL) in a finally block.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New regression suite /app/backend/tests/test_product_ads_seo.py covers the ad-optimised <title>/<meta>/<h1>/canonical-name trio. Note: rendered <title> always loses brand suffix to seo_clamp_title's 60-char cap — this is acceptable per spec which only requires the prefix to be <=60. All 37 products are license_type='lifetime' so the subscription-chip code branch is unexercised in live data (skipped, not failed). Run the full regression with: pytest /app/backend/tests/test_product_ads_seo.py /app/backend/tests/test_ads_readiness.py /app/backend/tests/test_google_merchant_feed.py /app/backend/tests/test_public_domain_hygiene.py -v"
+}

@@ -1,0 +1,35 @@
+{
+  "summary": "Re-verified the two bug fixes in /app/php-version/setup-check.php (POST handler ordering + JSON-blob allowlist) flagged by iteration_3. All 19 tests in test_public_domain_hygiene.py now PASS (1 unrelated checkout test skipped because gateway in test mode). Strengthened the suite with stricter assertions: HTTP 302 (not 200) on fix POST, exact leak-row count == 3 (excludes seo_health_probe_cache), data-testid hooks present, cleaned=3 in redirect Location, hygiene-clean-state element shown after fix. Added a dedicated regression test verifying JSON-blob rows are excluded from the leak table even when their value contains preview.emergentagent.com.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_public_domain_hygiene.py",
+    "/app/test_reports/pytest/public_domain_hygiene.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "URL-key allowlist is duplicated in setup-check.php (line 97-98) and includes/settings.php setting_get() (line 18-44). Inline comment already warns about this. Consider extracting into a shared constant URL_SETTING_KEYS in includes/settings.php and importing from setup-check.php to prevent drift.",
+    "Cleanup regex uses unanchored https?://[^/\\s\"\\']*\\.preview\\.emergentagent\\.com — solid for the documented hostnames, but if Emergent ever issues a hostname like xxx.preview.emergentagent.com.cdn.cf (i.e. a sub-host with extra path-y suffix on the host part), the character class [^/\\s\"\\'] would still match correctly. Low risk; just worth a comment.",
+    "POST fix handler swallows all Throwable exceptions silently (line 124) — a DB error during cleanup would still produce a 302 with cleaned=0 and no operator-visible feedback. Consider logging via error_log() for debuggability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_public_domain_hygiene.py"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 tests passed, 1 skipped due to test-mode gateway)",
+    "frontend": "skipped per request"
+  },
+  "test_credentials": "Admin: admin@maventechsoftware.com / Admin@UC2026!",
+  "seed_data_creation": "Re-seeded leaky settings rows before running tests: main_url='https://show-live-7.preview.emergentagent.com', site_domain_url='https://show-live-7.preview.emergentagent.com', company_logo='https://stage-show-2.preview.emergentagent.com/uploads/company/logo-356b9f03.png', plus seo_health_probe_cache JSON blob containing embedded preview URLs. After fix execution: main_url='', site_domain_url='', company_logo='/uploads/company/logo-356b9f03.png', seo_health_probe_cache untouched (correctly excluded).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_public_domain_hygiene.py now has 20 tests. The setup-check hygiene test will need leaky DB rows re-seeded before each run because the test executes the fix and clears them. Use: mysql -uroot ucode_store -e \"UPDATE settings SET v='https://show-live-7.preview.emergentagent.com' WHERE k IN ('main_url','site_domain_url'); UPDATE settings SET v='https://stage-show-2.preview.emergentagent.com/uploads/company/logo-356b9f03.png' WHERE k='company_logo'\". The checkout-flow test is intermittently skipped when the payment gateway is in test mode and the form doesn't post a redirect — this is expected and unrelated to the domain-hygiene work.",
+  "rca of the issue": "Both bugs documented in iteration_3 are now fully resolved. (1) POST handler relocated above include admin-shell.php at line ~103, so the header('Location:...') call fires before any output is sent — confirmed by HTTP 302 with cleaned=3 in Location header. (2) Both detection SELECT and fix loop now use the same $urlSettingKeys allowlist (['main_url','site_domain_url','company_logo','site_url','public_url','base_url']), so JSON-blob rows like seo_health_probe_cache (whose v happens to contain preview URLs inside a JSON string) are never selected as candidates — confirmed by exact leak-row count == 3, with seo_health_probe_cache absent from the table. The unanchored regex change is belt-and-suspenders for any non-URL-key edge case that might slip through in the future."
+}

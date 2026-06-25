@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 9 testing of Google Merchant Center feed aliases. 12/18 pytest assertions pass. New URL routing, dynamic atom self-link, robots.txt discovery, admin panel link update — all WORK as designed. However two ACCEPTANCE-CRITERIA failures: (1) Cache-Control header is being overridden by PHP session_start to 'no-store, no-cache, must-revalidate' instead of the required 'public, max-age=3600'. (2) ALL absolute URLs in the feed (channel <link>, atom:link rel=self, every <g:link>, every <g:image_link>) point to the cluster-internal host 'show-live-7.cluster-5.preview.emergentcf.cloud' which returns 403 to public crawlers — Google Merchant Center would reject every item.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/feed/google-products.xml (+ all 4 aliases)", "issue": "Cache-Control header is 'no-store, no-cache, must-revalidate' instead of the required 'public, max-age=3600'. Root cause: includes/functions.php is required on line 20 of merchant-feed.php which calls session_start(); PHP's default session cache_limiter emits the no-cache trio (Cache-Control, Pragma, Expires) and those headers persist. The header('Cache-Control: public, max-age=3600') on line 23 does NOT override (Pragma: no-cache and Expires: Thu, 19 Nov 1981 are also present in the response, confirming PHP session is winning). Fix options: (a) call session_cache_limiter('') BEFORE session_start in includes/functions.php for feed/sitemap endpoints, or (b) at top of merchant-feed.php call session_write_close(); header_remove('Cache-Control'); header_remove('Pragma'); header_remove('Expires'); BEFORE re-setting Cache-Control. X-Robots-Tag IS correctly set (it doesn't collide with session defaults), confirming the header() call itself runs.", "priority": "HIGH"},
+      {"endpoint": "/feed/google-products.xml (+ all 4 aliases) — link URLs", "issue": "Every absolute URL emitted in the feed resolves to the cluster-internal host 'show-live-7.cluster-5.preview.emergentcf.cloud' which returns HTTP 403 Forbidden to public/Google crawlers. Verified by curl: GET https://show-live-7.cluster-5.../product.php?slug=ms-visio-professional-2019-pc -> 403, while GET https://show-live-7.preview.emergentagent.com/product.php?slug=ms-visio-professional-2019-pc -> 200. site_url() in includes/functions.php lines 1663-1699 has logic to detect cluster-internal HTTP_HOST and fall through to setting_get('main_url') or SITE_URL constant — but since the output IS the cluster-internal host, either main_url is unset and SITE_URL contains the cluster-internal host, OR the host actually presented to PHP doesn't match the regex /\\.cluster-\\d+\\.preview\\.emergentcf\\.cloud$/i. This bug ALSO contaminates robots.txt sitemap directives and the admin SEO panel link href. Google Merchant Center will reject 100% of items because the landing pages 403. THIS IS A BLOCKER for Google Shopping to actually work end-to-end.", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Admin SEO health check link", "issue": "Anchor text correctly shows '/feed/google-products.xml' and mentions '/merchant-feed.xml' as alias, but the href is built with site_url() which returns the cluster-internal host. Same site_url() bug as the feed itself — opens to a 403 page from public network.", "affected_selectors": ["a[href*='google-products.xml']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_google_merchant_feed.py",
+    "/app/test_reports/pytest/iter9_feed.xml"
+  ],
+  "action_items": [
+    "Fix Cache-Control override in merchant-feed.php: call session_write_close(); header_remove('Cache-Control'); header_remove('Pragma'); header_remove('Expires'); before lines 22-24, OR set session_cache_limiter('') before session_start for feed endpoints.",
+    "Fix site_url() so feed URLs resolve to the PUBLIC host (show-live-7.preview.emergentagent.com), not the cluster-internal host. Likely fixes: (a) set 'main_url' in admin settings to the public preview URL, or (b) make site_url() honor HTTP_X_FORWARDED_HOST when HTTP_HOST is cluster-internal, or (c) update the SITE_URL constant. Verify by curl: every <g:link> and <atom:link href> in /feed/google-products.xml must respond 200 on the same host.",
+    "After fixing site_url(), retest robots.txt sitemap URLs and admin SEO panel link href."
+  ],
+  "critical_code_review_comments": [
+    "merchant-feed.php inherits PHP session side-effects via includes/functions.php require — for a public XML endpoint that must be cacheable and has no per-user state, session_start should be skipped entirely (or session cache_limiter cleared).",
+    "site_url() relies on a hard-coded regex for cluster-internal hosts and falls back to settings/constant. A safer pattern is to honor HTTP_X_FORWARDED_HOST / X-Forwarded-Proto first, since the Emergent ingress sets these correctly to the public hostname.",
+    "The 5-URL alias if-block in router.php works but is brittle (string equality). A regex match (preg_match('#^/(merchant-feed|feed/google-products|feeds/google-products|google-merchant-feed|google-shopping-feed)\\.xml$#', $path)) would be cleaner and easier to extend."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_google_merchant_feed.py (new)"
+  ],
+  "success_rate": {"backend": "67% (12/18 pytest assertions)", "frontend": "75% (admin panel link present and labelled correctly; href host wrong)"},
+  "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None — read-only feed/robots.txt tests.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The 5 URL aliases + dynamic atom self-link + robots.txt sitemap entries + admin link wiring are all CORRECT in code. Two pre-existing environment/PHP-stack bugs surface against iteration 9's acceptance criteria: (1) PHP session_start overrides Cache-Control with the nocache trio — needs session_cache_limiter('') or session_write_close+header_remove BEFORE the header() calls in merchant-feed.php. (2) site_url() resolves to the cluster-internal host (show-live-7.cluster-5.preview.emergentcf.cloud) which returns 403 to public clients, so every absolute URL in the feed and the admin panel anchor is unreachable for Google. After both fixes, rerun pytest backend/tests/test_google_merchant_feed.py — should be 18/18.",
+  "rca of the issue": "Cache-Control: PHP's session_cache_limiter (default 'nocache') runs inside session_start() at require time. Subsequent header('Cache-Control: ...') calls should replace, but PHP also writes Pragma and Expires which the feed code never clears — and in practice the Cache-Control replacement is not taking effect on the live response (likely because session output handlers re-emit at flush). Headers in actual response: cache-control=no-store, no-cache, must-revalidate; expires=Thu, 19 Nov 1981; pragma=no-cache — all session-cache-limiter defaults. Site URL: requests come in via Cloudflare/Emergent ingress with HTTP_HOST sometimes set to the internal cluster hostname; site_url()'s cluster-detection regex DOES match, but the fallback (setting_get('main_url') and SITE_URL) returns the same internal hostname, so the protection is moot. Net effect: feed XML is syntactically perfect but functionally rejected by Google because (a) it's marked uncacheable and (b) every landing-page link 403s."
+}

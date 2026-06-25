@@ -1,0 +1,98 @@
+{
+  "summary": "Iteration 19 — validated the 5-part bundle (Enhanced Conversions hashed payload, Google Customer Reviews opt-in, MerchantPromotion promotion_id, g:product_detail attribute pairs, admin GMC input). New pytest suite /app/backend/tests/test_iter19_enhanced_conv_gcr_promo_detail.py (32 tests) — 31/32 PASS. The single failure is a NEW real spec-compliance bug: when an order has BOTH email and phone empty (after trim) AND any tracking ID is set, the PHP at order-success.php still emits the literal `gtag('set', 'user_data', { });` block (with an empty object). The runtime JS condition `if (typeof gtag === 'function' && (false || false))` prevents the actual call from firing — so functionally harmless — but the spec explicitly says 'If both email AND phone are empty, the whole gtag('set', 'user_data', …) block MUST be skipped entirely.' Frontend Playwright on admin /admin.php?tab=company verified: [data-testid='tk-gmc-input'] present with name=google_merchant_id, pattern=^[0-9]{6,15}$, hint 'merchants.google.com — unlocks the Verified by Google Customers badge'. Valid '12345678' persists; invalid 'abcdef' rejected and old value preserved; flash banner lists 'google_merchant_id' as invalid. Hashes computed independently via Python hashlib match PHP output exactly. Full /app/backend/tests/ run: 162 passed / 4 skipped / 2 failed (the second failure is the same pre-existing test_product_ads_seo helper bug from iter-17, NOT a real product regression). All test state restored (tracking IDs blanked, order MVT-DEMO-003 email/phone restored, on-sale product restored).",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/order-success.php — Enhanced Conversions block",
+        "issue": "NEW (this iteration): when order email AND phone are both empty (after trim) and ga4 OR (gAds+label) is set, the page still emits `gtag('set', 'user_data', { });` with an empty object. Spec says the whole block must be skipped. Runtime JS gate (`(false || false)`) does prevent the actual gtag call from firing, so functionally inert, but technically a spec deviation. Fix: change the PHP outer guard at /app/php-version/order-success.php around line 351 from `if ($ga4Id !== '' || ($gAdsId !== '' && $gAdsLabel !== '')):` to `if (($ga4Id !== '' || ($gAdsId !== '' && $gAdsLabel !== '')) && ($ecEmailHash !== '' || $ecPhoneHash !== '')):` — or alternately drop the unnecessary JS-side `(true || false)` literal once the PHP guard handles it. Priority: LOW (no behavioural impact; just a no-op block in the source)."
+      },
+      {
+        "endpoint": "test_product_ads_seo.py::test_title_long_format_short_name (PRE-EXISTING from iter-17)",
+        "issue": "Same test-helper edge case documented in iter-17 and iter-18 reports. The product output is correct; only the test helper needs a patch. NOT introduced by iter-19."
+      }
+    ]
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iter19_enhanced_conv_gcr_promo_detail.py",
+    "/app/test_reports/pytest/iter19_results.xml",
+    "/app/test_reports/pytest/iter19_full.xml"
+  ],
+
+  "validated_features": {
+    "enhanced_conversions": {
+      "hashed_payload_renders_with_ga4_set": "PASS — `gtag('set', 'user_data', { sha256_email_address: '...', sha256_phone_number: '...' })` emitted BEFORE the purchase event. Hashes verified independently with Python hashlib.sha256 against `priya.demo@example.in` (email) and the E.164-normalised phone '+919876543210'. Both 64-hex lowercase.",
+      "skipped_when_all_tracking_ids_blank": "PASS — no user_data block, no purchase event when all 5 tracking IDs are empty.",
+      "missing_phone_only_email_emitted": "PASS — when phone='' and email present, only sha256_email_address line emitted, no empty hash, no sha256_phone_number key.",
+      "both_empty_block_skipped_entirely": "FAIL (spec deviation) — PHP still emits `gtag('set', 'user_data', { });` shell with an empty object when both email and phone are empty after trim. Runtime gate prevents the call from firing, but the literal block is in the source. See backend_issues.minor[0]."
+    },
+    "google_customer_reviews_optin": {
+      "renders_with_gmc_and_paid_order": "PASS — platform.js script + gapi.surveyoptin.render({merchant_id, order_id, email, delivery_country, estimated_delivery_date YYYY-MM-DD}) all present on /order-success.php?order=MVT-DEMO-003 when google_merchant_id='12345678'.",
+      "absent_when_gmc_empty": "PASS — neither platform.js nor gapi.surveyoptin.render appears when google_merchant_id is blank.",
+      "absent_for_demo_order": "PASS — opt-in not rendered when no order param (demo mode), even with GMC set."
+    },
+    "merchant_promotion": {
+      "google_feed_37_promotion_ids": "PASS — exactly 37 <g:promotion_id>MAVEN20</g:promotion_id> on /feed/google-products.xml.",
+      "bing_feed_37_promotion_ids": "PASS — exactly 37 on /feed/bing-shopping.xml.",
+      "promotion_id_dropped_when_sale_cleared": "PASS — setting original_price=price on one product drops the count to 36; restoring brings it back to 37."
+    },
+    "g_product_detail": {
+      "google_feed_opening_count_148": "PASS — 4 × 37 = 148 <g:product_detail> opening tags.",
+      "bing_feed_opening_count_148": "PASS — same 148 on Bing (g: namespace shared).",
+      "ordered_3_children_per_block": "PASS — structured regex over the WHOLE feed matched 148/148 blocks; ALL 148 blocks have <g:section_name> → <g:attribute_name> → <g:attribute_value> in order.",
+      "allowed_sections_and_attributes": "PASS — every block uses one of {Compatibility, Licensing, Delivery} and one of {Operating System, License Type, Number of Devices, Activation Method}.",
+      "values_match_db": "PASS — random 3-product spot check: Operating System matches products.platform; License Type matches ucwords(strtolower(products.license_type)); 'Number of Devices'='1 device'; 'Activation Method'='Digital download — emailed product key'."
+    },
+    "admin_gmc_input": {
+      "field_present_with_pattern_and_hint": "PASS — [data-testid='tk-gmc-input'] in /admin.php?tab=company, name='google_merchant_id', pattern='^[0-9]{6,15}$', helper text contains 'merchants.google.com' and 'Verified by Google Customers'.",
+      "valid_value_persists": "PASS — submitting '12345678' persists in settings table.",
+      "invalid_value_rejected_old_preserved": "PASS — submitting 'abcdef' is rejected, previous valid value '12345678' is preserved; redirect Location flash includes 'google_merchant_id' in the invalid keys list."
+    },
+    "regression_iter_18_and_earlier": {
+      "all_9_feed_urls_200": "PASS",
+      "sitemap_xslt_present": "PASS",
+      "g_product_highlight_148_still_holds": "PASS — coexists with the new 148 g:product_detail.",
+      "g_sale_price_effective_date_37": "PASS",
+      "g_return_policy_37": "PASS",
+      "g_free_shipping_threshold_37": "PASS",
+      "atom_link_self_echoes_alias": "PASS for all 9 routes."
+    }
+  },
+
+  "action_items": [
+    "LOW PRIORITY — Fix /app/php-version/order-success.php line ~351: tighten the outer PHP guard so the `gtag('set', 'user_data', …)` block is fully omitted from the page source when both $ecEmailHash and $ecPhoneHash are empty. Suggested change: `if (($ga4Id !== '' || ($gAdsId !== '' && $gAdsLabel !== '')) && ($ecEmailHash !== '' || $ecPhoneHash !== '')):`. No runtime impact today (the JS condition already gates the call); this is pure spec compliance.",
+    "OPTIONAL — Patch test_product_ads_seo.py::_title_prefix helper (pre-existing from iter-17)."
+  ],
+
+  "critical_code_review_comments": [
+    "/app/php-version/order-success.php (lines 332-359) — Enhanced Conversions implementation is solid: server-side hashing with hash('sha256', strtolower(trim(...))) is correct; phone E.164 normalisation is correct; per-key emission (no empty hashes ever serialised) is correct. The ONLY nit is the outer guard not also checking that at least one hash is non-empty — see action_items.",
+    "/app/php-version/order-success.php (lines 405-427) — Google Customer Reviews opt-in is gated on $isPaid && $gmcId !== '' && !empty($order['email']), exactly per spec. The platform.js script uses async defer + onload callback pattern which Google's docs require. estimated_delivery_date set to today's YYYY-MM-DD for digital downloads is a reasonable interpretation.",
+    "/app/php-version/merchant-feed.php (lines 333-352) — g:product_detail emits exactly 4 pairs per item in correct child order. License Type uses ucwords(strtolower(...)) which is brittle if the DB ever contains punctuation (e.g. 'multi-device'); fine for the current 'lifetime' / 'subscription' values. Activation Method and Number of Devices are hardcoded constants — acceptable given the single-product-type catalogue.",
+    "/app/php-version/merchant-feed.php (lines 354-361) — promotion_id MAVEN20 is gated on $hasSale = (original_price > price), independent of sale_starts_at/sale_ends_at. This means a permanently discounted product that has no sale window still gets the promo code — matches the current 37/37 state in DB.",
+    "/app/php-version/admin.php (line 900) — google_merchant_id regex /^[0-9]{6,15}$/ matches the input pattern attribute; symmetric client + server validation. The save_tracking_ids handler correctly skips invalid keys (preserves prior value) and appends them to the flash via urlencode-ed querystring — matches the existing pattern used for all other tracking IDs."
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iter19_enhanced_conv_gcr_promo_detail.py (NEW — 32 tests covering iter-19 scope + regression)"
+  ],
+
+  "success_rate": {
+    "backend": "97% on iter-19 scope (31/32 — single fail is a real spec-deviation bug, no behavioural impact). 162/164 across full /app/backend/tests/ (1 NEW spec deviation + 1 pre-existing helper bug from iter-17).",
+    "frontend": "100% on iter-19 admin GMC UI scope (login → field present → valid persist → invalid reject + flash banner all green)."
+  },
+
+  "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! (per /app/memory/test_credentials.md). Paid order MVT-DEMO-003 / priya.demo@example.in / $79.99 used as the canonical hashed-payload fixture.",
+  "seed_data_creation": "None permanent. During testing: temporarily blanked tracking IDs and order phone/email; cleared one product's original_price; ALL restored at fixture teardown and verified post-run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter-19 adds /app/backend/tests/test_iter19_enhanced_conv_gcr_promo_detail.py as the primary regression for: (a) Enhanced Conversions hashed payload + ordering before purchase event, (b) Google Customer Reviews opt-in gating, (c) g:promotion_id MAVEN20 count + sale-conditioned drop, (d) g:product_detail 148-block structure + DB-value cross-check, (e) admin GMC input + save_tracking_ids regex behaviour. The feed uses numeric `<g:id>{products.id}</g:id>` (NOT slug). $hasSale in merchant-feed.php is (original_price > price), NOT date-based. The Enhanced Conversions outer PHP guard does NOT yet check that at least one hash is non-empty — fix is a one-line change, see action_items.",
+  "rca of the issue": "Spec-deviation: PHP outer guard at order-success.php emits the user_data shell even when both email and phone hashes are empty. Reproduction: UPDATE orders SET phone='', email=' ' WHERE order_number='MVT-DEMO-003'; set ga4_measurement_id='G-TESTABC123'; curl /order-success.php?order=MVT-DEMO-003 | grep user_data — shows `gtag('set', 'user_data', { });`. Mitigation: tighten the outer if() to also require at least one of $ecEmailHash/$ecPhoneHash non-empty."
+}

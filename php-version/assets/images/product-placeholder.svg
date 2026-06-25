@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Product image">
+  <rect width="120" height="120" rx="14" fill="#eef2f7"/>
+  <rect x="22" y="30" width="76" height="58" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <circle cx="44" cy="50" r="7" fill="#cbd5e1"/>
+  <path d="M30 80 L52 58 L66 72 L80 56 L90 80 Z" fill="#cbd5e1"/>
+  <text x="60" y="106" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#94a3b8">Product</text>
+</svg>

@@ -1,0 +1,60 @@
+{
+  "name": "Maventech Admin",
+  "short_name": "Maventech",
+  "description": "Maventech Software admin console — orders, leads, reviews, emails and installs at a glance.",
+  "start_url": "/admin.php?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#06b6d4",
+  "id": "/admin.php?source=pwa",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/images/icons/admin-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/icons/admin-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/images/icons/admin-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/icons/admin-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/icons/admin-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/icons/admin-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Orders",            "url": "/admin.php?tab=orders",       "icons": [{ "src": "/assets/images/icons/admin-192.png", "sizes": "192x192" }] },
+    { "name": "Sales Detail",      "url": "/admin.php?tab=sales",        "icons": [{ "src": "/assets/images/icons/admin-192.png", "sizes": "192x192" }] },
+    { "name": "Lead Management",   "url": "/admin.php?tab=leads",        "icons": [{ "src": "/assets/images/icons/admin-192.png", "sizes": "192x192" }] },
+    { "name": "Install Schedule",  "url": "/admin.php?tab=installs",     "icons": [{ "src": "/assets/images/icons/admin-192.png", "sizes": "192x192" }] },
+    { "name": "Email Activity",    "url": "/admin.php?tab=emails",       "icons": [{ "src": "/assets/images/icons/admin-192.png", "sizes": "192x192" }] },
+    { "name": "Customer Reviews",  "url": "/admin.php?tab=reviews",      "icons": [{ "src": "/assets/images/icons/admin-192.png", "sizes": "192x192" }] },
+    { "name": "Email Templates",   "url": "/admin.php?tab=templates",    "icons": [{ "src": "/assets/images/icons/admin-192.png", "sizes": "192x192" }] }
+  ]
+}

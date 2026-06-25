@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 13 — retested both user-reported visual bugs from iteration 12 and confirmed regressions hold. Bug 1 (topbar utility chips invisible in light mode): FIXED — currency-selector + theme-toggle now render with light text (rgb(229,236,250)) on translucent-white outlines in BOTH light and dark themes, against the navy trustbar (rgb(0,61,122) light / rgb(11,20,38) dark). Bug 2 (One-Time Purchase badge blurry in dark mode): FIXED — badge now uses the new `.one-time-purchase-badge` class with explicit blue accents: dark mode bg=rgba(96,165,250,0.18) + border=rgba(147,197,253,0.35), light mode bg=rgb(219,234,254) + color=rgb(30,58,138). Badge text 'One-Time Purchase' is crisp and readable in both themes. iteration-12 navbar restructure still holds: navbar-actions has exactly 2 children (ask-ai-btn, cart-button), navbar-phone-cta absent, currency-selector + theme-toggle live inside .trustbar. Feed regression: all 5 alias URLs (/merchant-feed.xml, /feed/google-products.xml, /feeds/google-products.xml, /google-merchant-feed.xml, /google-shopping-feed.xml) return HTTP 200 with 148 g:product_highlight tags, 37 g:sale_price_effective_date tags, 37 g:gtin tags, and the atom self-link correctly echoes whichever alias was hit.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Product page badge (dark mode)", "issues": ["Minor deviation: computed text color is rgb(220,227,240) instead of the CSS-declared rgb(191,219,254) (#BFDBFE / sky-200). Visually crisp on the navy hero so it satisfies the spec's 'or similar near-white blue' allowance, but indicates a stylesheet override is winning over the .one-time-purchase-badge dark rule — main agent may want to add !important or raise specificity if the exact sky-200 tone is required."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/.screenshots/light_topbar.png",
+    "/app/.screenshots/dark_topbar.png",
+    "/app/.screenshots/light_badge_row.png",
+    "/app/.screenshots/dark_badge_row.png"
+  ],
+  "action_items": [
+    "Optional: raise specificity of `[data-bs-theme=\"dark\"] .one-time-purchase-badge { color: #BFDBFE; }` (e.g. add `!important` or scope it to `.badge.one-time-purchase-badge`) so the computed text color matches the declared sky-200 tone exactly — currently a higher-specificity rule (likely a generic `.badge` color from Bootstrap or theme-tokens) is winning and resolving to rgb(220,227,240). The badge is still clearly readable so this is cosmetic, not blocking."
+  ],
+  "critical_code_review_comments": [
+    "style.css now exceeds 4500 lines — recommend splitting into themed partials (trustbar.css, badges.css, dark-mode.css) before next iteration; future visual bugs will be hard to localize.",
+    "The fix relies on a CSS class change in product.php (`badge text-bg-info text-dark` -> `badge one-time-purchase-badge`) — confirm any other templates that previously used the same Bootstrap utility combo still render correctly; search for `text-bg-info text-dark` across templates to be safe.",
+    "Light-mode override for `.trustbar-utility-btn` was removed by design (comment in CSS explains why). Comment is good — keep the explanation so a future agent doesn't reintroduce the invisible-on-navy regression."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100%"},
+  "test_credentials": "Not required — visual-only retest, no auth flows touched.",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Both user-reported visual bugs from iteration 12 are verified fixed. Computed-style assertions captured: LIGHT topbar chips color=rgb(229,236,250) on rgb(0,61,122) navy; DARK product badge bg=rgba(96,165,250,0.18) + color=rgb(220,227,240) (close to declared #BFDBFE) + border=rgba(147,197,253,0.35); LIGHT product badge bg=rgb(219,234,254) + color=rgb(30,58,138). Feed aliases (5) all 200 with 148/37/37 highlight/sale-effective/gtin tag counts and dynamic atom self-link echo working. navbar-actions = 2 children (ask-ai-btn + cart-button), navbar-phone-cta absent. Only cosmetic note: dark-badge text color is rgb(220,227,240) instead of declared #BFDBFE — a generic .badge color rule is overriding; consider boosting specificity if exact match is required.",
+  "rca of the issue": "Bug 1 RCA: prior light-mode override `.trustbar-utility-btn { color: dark; border: faint-light; }` applied dark text on the dark-navy trustbar surface, making the chips effectively invisible. Fix: removed the light-mode override so the base light-on-translucent-white styling applies in both themes (the trustbar is navy regardless of site theme). Bug 2 RCA: badge used Bootstrap utilities `text-bg-info text-dark` which in dark mode rendered as washed-out dark text on light cyan — illegible against the navy hero. Fix: replaced with a dedicated `.one-time-purchase-badge` class providing explicit blue accents per theme (sky-100 bg + indigo-900 text in light; translucent indigo bg + near-white-blue text in dark). Verified with computed styles and screenshots in both themes."
+}

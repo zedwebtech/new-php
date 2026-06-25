@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 17 — validated rich-result eligibility for Free returns + Free delivery badges. New test suite /app/backend/tests/test_product_rich_results_iter17.py (15 tests, all PASS) covers: (A) Product JSON-LD offers.shippingDetails is now a LIST of 6 OfferShippingDetails (US/GB/CA/AU/IN/AE), each with a SINGLE ISO addressCountry string, shippingRate.value='0', doesNotShip=false, handlingTime+transitTime present; consistent across slugs windows-11-pro and microsoft-office-home-2024-pc. (B) offers.hasMerchantReturnPolicy has all 8 Google-required keys: @type, applicableCountry=['US','GB','CA','AU','IN','AE'], returnPolicyCategory=MerchantReturnFiniteReturnWindow, merchantReturnDays=30, returnMethod=ReturnByMail, returnFees=FreeReturn, refundType=FullRefund, merchantReturnLink ending /page.php?slug=refund-policy. (C) Merchant feed at /feed/google-products.xml emits exactly 37 <g:return_policy> blocks (each US + '30 days free returns') AND exactly 37 <g:free_shipping_threshold>0.00 USD</g:free_shipping_threshold> tags. Rich-result heuristics confirm no addressCountry-array warnings and applicableCountry is non-empty. Full regression (iter-10→16 suites): 80 passed / 4 skipped / 1 failed across test_product_ads_seo.py, test_google_merchant_feed.py, test_public_domain_hygiene.py, test_ads_readiness.py — the 1 failure is a TEST-HELPER edge case (not a product regression), see notes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "test helper in /app/backend/tests/test_product_ads_seo.py::_title_prefix",
+        "issue": "test_title_long_format_short_name fails for windows-11-pro. Root cause is the helper, not the product: rendered <title> is 'Buy Windows 11 Pro | Lifetime License Key | $79.99' (50 chars, format-compliant). seo_clamp_title already dropped the ' | uCode Store' brand suffix because the full string was 64 > 60 chars. BRAND_SUFFIX_RE = r'(\\s\\|\\s[^|]+|…)$' then matches the LAST '|'-separated segment and over-strips '| $79.99', leaving 'Buy Windows 11 Pro | Lifetime License Key' which fails the 3-pipe regex. Iter-16 passed this only because back then the combined title fit and the brand suffix was present for the helper to strip. Fix is purely in the test helper (e.g., detect 'no brand suffix' case by length, or anchor on a known brand whitelist)."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_product_rich_results_iter17.py",
+    "/app/test_reports/pytest/iter17_results.xml",
+    "/app/test_reports/pytest/iter17_regression.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (low priority): in /app/backend/tests/test_product_ads_seo.py update _title_prefix() so that when seo_clamp_title dropped the brand suffix entirely the helper does not strip the price segment by mistake. The product output itself is correct and compliant ('Buy Windows 11 Pro | Lifetime License Key | $79.99' = 50 chars, all 3 segments present).",
+    "No action needed for iter-17 schema work — both badges are rich-result eligible at the Product page AND the Merchant Center feed."
+  ],
+  "critical_code_review_comments": [
+    "/app/php-version/product.php lines 166-205: clean per-country array_map producing 6 OfferShippingDetails rules with single-ISO addressCountry — matches Google's Rich Results parser requirement (it silently drops blocks whose addressCountry is an array).",
+    "/app/php-version/product.php lines 212-221: hasMerchantReturnPolicy now contains all 8 fields Google needs; applicableCountry as a list is the correct shape for multi-country policies.",
+    "/app/php-version/merchant-feed.php lines 327-339: <g:return_policy> block uses g:return_policy_country + g:return_policy_policy (per support.google.com/merchants/answer/10961067). All 37 rows emit the policy and an explicit g:free_shipping_threshold of 0.00 USD — eliminates Merchant Center ambiguity on the Free delivery badge.",
+    "Minor cosmetic — product.php line 166 has 'category' value immediately followed by 'offers' key with no newline separator: 'ucfirst((string)($product[\\'category\\'] ?? \\'Software\\')),    \\'offers\\'  ' — purely formatting, no runtime impact."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_product_rich_results_iter17.py (NEW — 15 tests)"
+  ],
+  "success_rate": {
+    "backend": "100% on iter-17 scope (15/15 new tests pass; 80/81 regression executed pass with the single failure being a test-helper bug unrelated to iter-17 changes)",
+    "frontend": "N/A — backend-only testing requested"
+  },
+  "test_credentials": "Not required — all public pages.",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter-17 schema enrichment is complete and validated. /app/backend/tests/test_product_rich_results_iter17.py is the regression suite for shippingDetails-per-country and hasMerchantReturnPolicy schema, plus the 37x g:return_policy + g:free_shipping_threshold feed assertions. Run full regression with: pytest /app/backend/tests/ -v. Note the pre-existing test-helper edge case in test_product_ads_seo.py::_title_prefix (see action_items) — product output is correct, only the test helper over-strips when seo_clamp_title already removed the brand suffix.",
+  "rca of the issue": "The single regression failure (test_product_ads_seo.py::test_title_long_format_short_name) is NOT caused by iteration-17 changes. Reproduction: curl 'http://localhost:3000/product.php?slug=windows-11-pro' | grep '<title>' returns 'Buy Windows 11 Pro | Lifetime License Key | $79.99' (50 chars, 3-pipe format intact). The test helper _title_prefix applies regex r'(\\s\\|\\s[^|]+|…)$' to strip a brand suffix; when seo_clamp_title has already removed ' | uCode Store' (because 50+14=64 > 60), the helper then over-strips ' | $79.99' instead. Mitigation: leave product code untouched; only patch the helper to skip stripping when no canonical brand suffix is detected, or assert against the unstripped <title> directly."
+}

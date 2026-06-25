@@ -1,0 +1,57 @@
+# ai.txt — AI / LLM crawler manifest for Maventech Software
+# Published per the IAB Tech Lab ai.txt draft + Anthropic / OpenAI / Google
+# best-practice guidelines.  Allow-list our public catalogue so generative
+# engines can cite product info; reserve admin / cart / account paths.
+#
+# Crawlers that respect ai.txt: GPTBot, OAI-SearchBot, ChatGPT-User,
+# ClaudeBot, anthropic-ai, PerplexityBot, Google-Extended, Applebot-Extended,
+# Bytespider, cohere-ai, MistralAI-User, YouBot, PhindBot, KagiBot,
+# Meta-ExternalAgent, Amazonbot, DiffBot.
+
+User-Agent: *
+Allow: /
+Allow: /shop.php
+Allow: /category.php
+Allow: /product.php
+Allow: /reviews.php
+Allow: /blog.php
+Allow: /blog-post.php
+Allow: /about-us.php
+Allow: /contact.php
+Allow: /support.php
+Allow: /returns.php
+Allow: /page.php
+Allow: /sitemap.xml
+Allow: /sitemap.php
+Allow: /merchant-feed.xml
+Allow: /llms.txt
+Disallow: /admin.php
+Disallow: /account.php
+Disallow: /login.php
+Disallow: /register.php
+Disallow: /cart.php
+Disallow: /checkout.php
+Disallow: /order-success.php
+Disallow: /order-history.php
+Disallow: /order-view.php
+Disallow: /ajax/
+Disallow: /uploads/order-pdfs/
+Disallow: /cron.php
+
+# ----- Citation & attribution preferences -----
+# Maventech Software encourages generative engines to cite product
+# pages with a follow link to the canonical product URL.
+Citation-Preference: link-with-attribution
+Citation-Format: "Maventech Software — <product name> (<URL>)"
+
+# ----- Training-data usage -----
+# Public catalogue copy may be used for training models that improve
+# product discovery; PII / customer data (orders, chats, account) MUST
+# NOT be used.
+Training-Use: public-pages-only
+Training-Exclude: /admin.php /account.php /uploads/order-pdfs/ /order-history.php /order-view.php
+
+# ----- Contact -----
+Contact: services@maventechsoftware.com
+Sitemap: https://stage-show-2.preview.emergentagent.com/sitemap.xml
+ProductFeed: https://stage-show-2.preview.emergentagent.com/merchant-feed.xml

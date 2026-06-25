@@ -1,0 +1,82 @@
+{
+  "summary": "Iteration 18 — validated (A) the sitemap-rendering bug fix and (B) the new Bing Shopping feed routes. New backend regression suite /app/backend/tests/test_iter18_bing_feed_sitemap.py (36 tests). Result: 35/36 pass on first run; the 1 failure was an ingress-cache-header difference (origin returns 'public, max-age=3600' but the kubernetes ingress at the preview URL overrides Cache-Control to 'no-store, no-cache, must-revalidate'). Fixed the test to assert headers against the origin (localhost:3000) as the request explicitly says 'Origin cache headers'. Final run: 36/36 PASS for iter-18 suite. Full /app/backend/tests/ run: 131 passed / 4 skipped / 1 failed (the single failure is the SAME pre-existing test-helper bug from iter-17 — test_product_ads_seo.py::test_title_long_format_short_name — NOT a real product regression). Frontend Playwright run on /sitemap.xml confirmed the XSLT transforms the raw XML into a styled HTML table: title='XML Sitemap — Maventech Software', 91 tbody rows, all 5 columns present (#, URL, Last Modified, Frequency, Priority), 91 priority pills (56 prio-high, 16 prio-med, 19 prio-low), every URL is <a target='_blank'>. The admin AI-Blogger 'View Sitemap' button [data-testid='view-sitemap-btn'] has the correct href ending '/sitemap.xml'.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "test_product_ads_seo.py::test_title_long_format_short_name (PRE-EXISTING from iter-17)",
+        "issue": "Same test-helper edge case documented in iteration_17.json. windows-11-pro renders <title>='Buy Windows 11 Pro | Lifetime License Key | $79.99' (50 chars, 3-pipe format intact, format-compliant) but the helper _title_prefix() over-strips the price segment after seo_clamp_title already dropped the brand suffix. Product output is correct; only the test helper needs a patch. NOT introduced by iter-18 work."
+      }
+    ]
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iter18_bing_feed_sitemap.py",
+    "/app/test_reports/pytest/iter18_results.xml",
+    "/app/test_reports/pytest/iter18_full.xml"
+  ],
+
+  "validated_features": {
+    "sitemap_rendering_bug_fix": {
+      "raw_xml_status": "200, application/xml; starts with <?xml-stylesheet type='text/xsl' href='/assets/sitemap.xsl'?> right after the XML decl",
+      "xsl_asset_status": "/assets/sitemap.xsl returns 200 application/xml, contains <xsl:stylesheet>, <xsl:template match='/'>, 'XML Sitemap' header, and prio-high/prio-med/prio-low CSS classes",
+      "browser_rendering": "Title='XML Sitemap — Maventech Software', 91 styled table rows, 5 columns (#, URL, Last Modified, Frequency, Priority), 91 priority pills (56 prio-high / 16 prio-med / 19 prio-low), every URL link has target='_blank' rel='noopener'",
+      "admin_button": "[data-testid='view-sitemap-btn'] present on /admin.php?tab=ai-blogger with href ending /sitemap.xml (button is inside a collapsed accordion at first load — that's a benign UX detail, the data-testid + href are correct)"
+    },
+    "bing_shopping_feed": {
+      "routes_200": "all 4 new Bing routes (/feed/bing-shopping.xml, /feeds/bing-shopping.xml, /bing-shopping-feed.xml, /microsoft-merchant-feed.xml) return HTTP 200 application/xml; all 5 existing Google routes (/merchant-feed.xml, /feed/google-products.xml, /feeds/google-products.xml, /google-merchant-feed.xml, /google-shopping-feed.xml) also still return 200",
+      "bing_native_rss_aliases": "every Bing <item> contains <title>, <link>, <description>, <guid isPermaLink='true'>, <pubDate> ALONGSIDE the g:* tags (verified across all 37 items)",
+      "google_no_aliases": "every Google <item> has NO default-namespace title/link/description/guid/pubDate — only g:* tags",
+      "channel_title_diff": "Bing channel <title> ends with 'Bing Shopping Feed'; Google channel <title> ends with 'Software Product Feed'",
+      "atom_self_link": "for each of the 4 Bing routes, <atom:link rel='self' href='...'> ends with the exact request path that was hit"
+    },
+    "robots_txt": "lists three required Sitemap directives ending in /merchant-feed.xml, /feed/google-products.xml, /feed/bing-shopping.xml (plus /sitemap.xml, /llms.txt, /agents.json)",
+    "regression": {
+      "item_count_37": "both Bing and Google feeds emit exactly 37 <item> blocks",
+      "g_product_highlight_148": "both feeds emit exactly 148 <g:product_highlight> (4 per item × 37)",
+      "g_sale_price_effective_date_37": "37 occurrences on Google feed",
+      "g_return_policy_37": "37 occurrences on both feeds",
+      "g_free_shipping_threshold_37": "37 occurrences on both feeds",
+      "origin_cache_headers": "Cache-Control: public, max-age=3600; no Set-Cookie/Pragma/Expires on origin (localhost:3000). NOTE: the kubernetes ingress on the public preview host overrides Cache-Control to 'no-store, no-cache, must-revalidate' — that is an ingress/CDN layer behavior, NOT a code regression. If production needs cacheable feeds end-to-end, the ingress rule for /feed/*.xml / *.xml endpoints should be reviewed.",
+      "product_jsonld_iter17": "Product JSON-LD on /product.php?slug=windows-11-pro still has offers.shippingDetails as array of 6 entries and offers.hasMerchantReturnPolicy with applicableCountry array",
+      "title_under_60_chars": "verified — <title> is 50 chars"
+    }
+  },
+
+  "action_items": [
+    "OPTIONAL — Patch test_product_ads_seo.py::_title_prefix helper (pre-existing from iter-17, product output is compliant).",
+    "OPTIONAL — Investigate why the kubernetes ingress at show-live-7.preview.emergentagent.com overrides Cache-Control on /feed/*.xml from 'public, max-age=3600' to 'no-store, no-cache, must-revalidate'. The origin is correct; this is an ingress-layer concern. In production behind a CDN/proxy this may matter for crawler cache efficiency."
+  ],
+
+  "critical_code_review_comments": [
+    "/app/php-version/assets/sitemap.xsl — clean, presentation-only stylesheet. Correctly declares output method='html', exposes light + dark color schemes, and uses xsl:choose to color-code priority pills. The xsl:value-of for $p (numeric priority) renders as text content of the pill, which is the right call.",
+    "/app/php-version/sitemap-xml.php — placing the <?xml-stylesheet?> PI immediately after the XML decl is the correct order; browsers won't apply XSLT if the PI appears after <urlset>. Search engines (Google/Bing) skip PIs they don't understand so this is safe.",
+    "/app/php-version/router.php — all 9 alias routes (5 Google + 4 Bing) cleanly route to merchant-feed.php. The Bing routes correctly drive $isBingMode from the request path (so a single feed generator handles both flavors).",
+    "/app/php-version/merchant-feed.php — per-item RSS-native aliases (<title>, <link>, <description>, <guid isPermaLink='true'>, <pubDate>) emitted only inside the Bing branch. Microsoft Merchant Center accepts either set; emitting both makes the feed portable. Google routes stay slim — correct.",
+    "/app/php-version/robots-txt.php — three Sitemap directives now point to /merchant-feed.xml, /feed/google-products.xml, /feed/bing-shopping.xml. Note: robots.txt also lists /sitemap.xml, /llms.txt, /agents.json as Sitemap directives — that exceeds the 'THREE' in the request but is additive and harmless (search engines tolerate multiple Sitemap lines).",
+    "MINOR — The 'View Sitemap' button [data-testid='view-sitemap-btn'] in /admin.php?tab=ai-blogger is inside a collapsed accordion section on first load (not 'visible' to Playwright until expanded). data-testid + href are 100% correct so click flow works; just a UX note if user testing expects it above-the-fold."
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iter18_bing_feed_sitemap.py (NEW — 36 tests covering iter-18 scope)"
+  ],
+
+  "success_rate": {
+    "backend": "100% on iter-18 scope (36/36). 131/132 across full /app/backend/tests/ — single failure is the pre-existing test-helper bug from iter-17, unrelated to iter-18.",
+    "frontend": "100% on iter-18 scope (XSLT-rendered sitemap loads with all assertions met; admin button data-testid + href verified)."
+  },
+
+  "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! (per /app/memory/test_credentials.md)",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter-18 adds /app/backend/tests/test_iter18_bing_feed_sitemap.py as the primary regression for: (a) sitemap.xml XSLT rendering + /assets/sitemap.xsl reachability, (b) all 9 merchant-feed routes (4 Bing + 5 Google), (c) per-item native RSS aliases in Bing mode only, (d) channel <title> differentiation, (e) atom:link self-href echo, (f) robots.txt Sitemap directives. Cache-header assertion runs against http://localhost:3000 (origin), NOT the external preview URL — the kubernetes ingress overrides Cache-Control. Full suite: pytest /app/backend/tests/ -v",
+  "rca of the issue": "Sitemap rendering bug (user's screenshot showed wall-of-XML): root cause was the absence of an XSLT stylesheet processing instruction in /sitemap.xml; modern browsers won't apply a stylesheet that isn't referenced from the document. Fix: added <?xml-stylesheet type='text/xsl' href='/assets/sitemap.xsl'?> right after the XML declaration in /app/php-version/sitemap-xml.php, and created /app/php-version/assets/sitemap.xsl (HTML output method with table layout, dark-mode aware, priority pills). Search engines ignore the PI so SEO is unaffected. Verified end-to-end via Playwright: title 'XML Sitemap — Maventech Software', 91 styled rows, 5 columns, 91 colored priority pills."
+}
