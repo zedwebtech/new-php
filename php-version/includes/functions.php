@@ -1812,6 +1812,48 @@ function site_url(): string
 }
 
 /**
+ * Persist the real public domain into the `site_domain_url` / `main_url`
+ * settings the first time the store is served from a genuine production host.
+ *
+ * Order / license-key emails and PDF receipts are frequently generated from a
+ * CLI/cron context (no Host header), where they fall back to these stored
+ * settings to build ABSOLUTE product-image URLs. If the database was imported
+ * from the Emergent preview, those settings still point at the preview host
+ * (or are empty) — which makes every product image in emails render broken
+ * once the site is live. This self-heals them on the first real page view, so
+ * no admin action is required after deploying to maventechsoftware.com.
+ */
+function mv_sync_public_domain(): void {
+    if (PHP_SAPI === 'cli') return;
+    $fwd  = trim((string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ''));
+    $host = $fwd !== '' ? ($fwd === '' ? '' : (str_contains($fwd, ',') ? trim(strtok($fwd, ',')) : $fwd))
+                        : (string)($_SERVER['HTTP_HOST'] ?? '');
+    $host = strtolower(trim($host));
+    if ($host === '') return;
+    // Only adopt genuine public domains — never preview / cluster / localhost / IPs.
+    if (preg_match('/(?:^|\.)preview\.emergentagent\.com$/i', $host)) return;
+    if (preg_match('/\.cluster-\d+\.preview\.emergentcf\.cloud$/i', $host)) return;
+    if (preg_match('/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\d+\.\d+\.\d+\.\d+)(:|$)/i', $host)) return;
+    $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        $p = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
+        $proto = str_contains($p, ',') ? trim(strtok($p, ',')) : trim($p);
+    }
+    $real = $proto . '://' . $host;
+    foreach (['site_domain_url', 'main_url'] as $key) {
+        try {
+            $cur     = trim((string)setting_get($key, ''));
+            $curHost = $cur !== '' ? strtolower((string)parse_url($cur, PHP_URL_HOST)) : '';
+            $stale = ($cur === '')
+                || (bool)preg_match('/(?:^|\.)preview\.emergentagent\.com$/i', $curHost)
+                || (bool)preg_match('/\.cluster-\d+\.preview\.emergentcf\.cloud$/i', $curHost)
+                || in_array($curHost, ['localhost', '127.0.0.1', '0.0.0.0'], true);
+            if ($stale && $curHost !== $host) setting_set($key, $real);
+        } catch (Throwable $e) { /* DB not ready — ignore */ }
+    }
+}
+
+/**
  * Convert any absolute URL whose host is an Emergent preview hostname
  * (`*.preview.emergentagent.com`) into one that uses the CURRENT request's
  * host, so admin-saved settings (logo, main_url, site_domain_url, AI image

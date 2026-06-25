@@ -995,3 +995,13 @@ PHP + MariaDB are apt-installed and DO NOT survive a pod restart (only /app pers
 - router.php (preview) now lets the global gzip handler compress css/js/svg (removed the explicit Content-Length that disabled it): style.css 154→29 KB, main.js 48→13 KB on the wire.
 - Removed orphan 1.1 MB assets/images/hero/hero-brand.png (unreferenced dead weight).
 - Confirmed product images are already optimized WebP (~15 KB), head already has preconnect, async icon CSS, preloaded LCP image, deferred JS, swap fonts.
+
+---
+## Product images bulletproofed everywhere (2026-06-25)
+Goal: product/plan images must never break on thank-you page, emails, receipts, invoices, subscriptions.
+- **Emails**: centralized host resolution in new `email_public_base()` (includes/email.php) — prefers the real production domain, skips stale preview/cluster/localhost values, falls back through RAW stored settings so even CLI/cron sends emit ABSOLUTE URLs. `email_absolute_url()` + the email logo, product image, tracking pixel, track-order links all now resolve absolute. WebP product images auto-swap to their .jpg sibling (Outlook/Apple Mail safe) — all 42 products have jpg siblings.
+- **Auto-domain capture**: `mv_sync_public_domain()` (includes/functions.php, called from header.php) writes the real domain into site_domain_url/main_url on the first genuine production page view, so cron emails/PDFs build correct image URLs without admin action.
+- **setting_get($key,$default,$raw=true)**: new raw mode returns the stored value without the preview-host rewrite (which stripped the host to "/" on CLI).
+- **PDF receipts/invoices**: confirmed they use bundled LOCAL brand-watermark images (isRemoteEnabled=false, chroot) — no per-product image dependency; both generate valid %PDF files.
+- **Thank-you page (order-success)**: product image is root-relative `/uploads/...` (+ onerror placeholder) — loads on any host.
+- **Subscriptions**: plan icons were seeded with Emergent build-CDN URLs (static.prod-images.emergentagent.com) — re-pointed to bundled local images (/assets/images/subscriptions/<slug>.png) in the live DB, database.sql seed, and an idempotent start.sh migration. Verified all 4 render.

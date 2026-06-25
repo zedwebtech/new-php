@@ -100,6 +100,12 @@ mysql -uroot ucode_store -e "CREATE TABLE IF NOT EXISTS visitor_log (
 # database.sql; this keeps it on for any pod created before that change.
 mysql -uroot ucode_store -e "UPDATE regions SET active=1 WHERE code='EU'" 2>/dev/null || true
 
+# Self-host subscription plan icons. They were originally seeded with Emergent
+# build-CDN URLs (static.prod-images.emergentagent.com) which are not reliable
+# on a customer's production domain. Point them at the bundled local images so
+# plan images never break. Idempotent — only rewrites the stale CDN value.
+mysql -uroot ucode_store -e "UPDATE subscription_plans SET icon_image=CONCAT('/assets/images/subscriptions/', slug, '.png') WHERE icon_image LIKE '%static.prod-images.emergentagent.com%' OR icon_image='' OR icon_image IS NULL" 2>/dev/null || true
+
 
 # 3) Export integration keys from .env files (preview convenience)
 # Load /app/php-version/.env first (PHP-store-specific secrets like Emergent

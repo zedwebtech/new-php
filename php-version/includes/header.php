@@ -7,6 +7,9 @@ require_once __DIR__ . '/regions.php';
 require_once __DIR__ . '/visitor_track.php';
 // Track this public page-view (silently skipped for bots / admin / CLI).
 track_visitor();
+// Self-heal the public domain settings on the first real production page view
+// so cron/CLI order emails + PDF receipts build correct absolute image URLs.
+if (function_exists('mv_sync_public_domain')) { mv_sync_public_domain(); }
 
 // Self-cron heartbeat — if the AI Auto-Blogger is overdue (>24 h), fire it
 // in the background after this page has finished rendering. Bots, CLI and

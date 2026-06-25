@@ -1,6 +1,6 @@
 <?php
 // Settings helpers — used by admin template editor + email sender + checkout.
-function setting_get(string $key, string $default = ''): string {
+function setting_get(string $key, string $default = '', bool $raw = false): string {
     static $cache = null;
     static $reqMarker = null;
     // Detect a new HTTP request — PHP-CLI workers reuse the same process so
@@ -17,6 +17,9 @@ function setting_get(string $key, string $default = ''): string {
     }
     if ($key === '__flush__') { $cache = null; return ''; }
     $val = $cache[$key] ?? $default;
+    // Raw read: exact stored value, no preview-host rewrite (used when building
+    // absolute email/PDF URLs from CLI where the rewrite would strip the host).
+    if ($raw) return (string)$val;
 
     // Auto-heal stale Emergent preview URLs that were saved while the
     // codebase was being built on Emergent. After upload to a real domain
