@@ -1019,3 +1019,13 @@ Goal: product/plan images must never break on thank-you page, emails, receipts, 
 - New `brand_logo_html()` helper (functions.php) renders a `<picture>` with the WebP source + raster fallback (WebP only when the sibling exists), used by header.php + footer.php; falls back to inline SVG when no logo. Web pages now load the 3 KB WebP; emails/PDFs/old browsers keep the PNG.
 - Set company_logo to the local mark in the live DB, database.sql seed, and an idempotent start.sh migration (only replaces empty/placeholder/stale-preview values, never a real admin upload). Email logo now resolves to an absolute, real PNG.
 - Verified: header/footer render <picture>+WebP on home and regional pages; both assets 200; email logo absolute.
+
+---
+## Brand favicon + app icons (2026-06-25)
+Generated a full matching icon set from the brand mark (blue gradient rounded square + white "M" + accent dot), replacing the old #0066CC default set:
+- /favicon.svg (704 B vector), /favicon.ico (multi-size 16/32/48 PNG-in-ICO)
+- /assets/images/favicon/favicon-16|32|64.png (rounded, transparent — browser tabs)
+- apple-touch-icon.png 180x180 (opaque full-bleed — iOS applies its own mask)
+- icon-192.png + icon-512.png (opaque full-bleed — PWA "any maskable", referenced by manifest)
+- Updated <head> apple-touch-icon to 180x180 and theme-color to #0B5CFF; manifest theme_color -> #0B5CFF.
+All static files (no migration needed); all serve 200 with correct content-types. Verified visually.

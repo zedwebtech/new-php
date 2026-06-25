@@ -32,7 +32,7 @@ $manifest = [
     'display'          => 'standalone',
     'orientation'      => 'any',
     'background_color' => '#0b1220',
-    'theme_color'      => '#0066CC',
+    'theme_color'      => '#0B5CFF',
     'id'               => '/?source=pwa',
     'categories'       => ['shopping', 'business', 'productivity'],
     'lang'             => 'en-US',
