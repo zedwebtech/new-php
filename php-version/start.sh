@@ -96,6 +96,11 @@ mysql -uroot ucode_store -e "CREATE TABLE IF NOT EXISTS visitor_log (
     KEY idx_device (device)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" 2>/dev/null || true
 
+# Enable the Europe (EU/EUR) storefront. Seeded active on fresh pods via
+# database.sql; this keeps it on for any pod created before that change.
+mysql -uroot ucode_store -e "UPDATE regions SET active=1 WHERE code='EU'" 2>/dev/null || true
+
+
 # 3) Export integration keys from .env files (preview convenience)
 # Load /app/php-version/.env first (PHP-store-specific secrets like Emergent
 # LLM key, Stripe, Resend), then /app/backend/.env (only kept for legacy

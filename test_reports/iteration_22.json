@@ -1,0 +1,72 @@
+{
+  "summary": "Iter-22 frontend-only end-to-end QA of Maventech Software PHP storefront + admin per main agent's request. All critical flows (regional storefronts + currency, dark mode, add-to-cart persistence, coupon MAVEN20, DEMO checkout, admin login + 16 admin tabs, AI chat lead capture, newsletter, 404 handling) PASS. No PHP fatal/parse/warning/notice errors observed on any tested page. No critical bugs found.",
+
+  "backend_issues": {"critical": [], "minor": []},
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "verification_evidence": {
+    "regional_storefronts": {
+      "/": "200, USD ($)",
+      "/ca/": "200, CAD (CA$)",
+      "/uk/": "200, GBP (£)",
+      "/au/": "200, AUD (AU$)",
+      "/eu/": "200, EUR (€)"
+    },
+    "regional_inner_pages_200": ["/ca/shop", "/uk/shop", "/eu/shop", "/au/shop", "/ca/about-us.php", "/uk/contact.php", "/ca/contact.php"],
+    "currency_samples": {
+      "US first product": "$209.99 (was $499.99)",
+      "CA same product": "CA$287.69 (was CA$684.99)",
+      "UK same product": "£165.89 (was £394.99)",
+      "EU same product": "€193.19 (was €459.99)",
+      "AU same product": "AU$319.18 (was AU$759.98)"
+    },
+    "region_switcher_widget": "data-testid=currency-selector + country-opt-CA click navigated / -> /ca/shop and label updated to '🇨🇦 CAD'",
+    "dark_mode_toggle": "html[data-bs-theme] flips light <-> dark on toggle click",
+    "add_to_cart": "Click on [data-testid=add-to-cart-microsoft-office-2024-professional-plus-windows] => POST /ajax/cart.php 200; cart badge -> 1; /cart.php renders item with $209.99 line + $209.99 subtotal",
+    "coupon_MAVEN20": "On /checkout.php applied via [data-testid=coupon-apply] -> toast 'Coupon applied — 20% off!' + summary 'Coupon (MAVEN20 — 20% off) -$42.00' -> total $209.99 -> $167.99",
+    "demo_checkout": "Filled billing + dummy card (4242…) on /checkout.php and clicked [data-testid=checkout-pay-button] -> redirected to /order-success.php?order=MV2606251EBE6, success card 'Thanks for purchasing with us, Test!' with order #, payment method, total $167.99, QR receipt and license-key delivery copy",
+    "admin_login": "POST /login.php with admin@maventechsoftware.com / Admin@UC2026! -> 302 -> /admin.php?tab=dashboard. Dashboard renders ($378 revenue / 4 orders / 4 customers / 27 keys / 29% open rate / Conversion Funnel / Revenue Mix)",
+    "admin_tabs_status": {
+      "all 16 tabs tested (dashboard, users, products, orders, sales, leads, emails, reviews, templates, payment, smtp, inventory, regions, company, subscription, blogger)": "HTTP 200, NO PHP fatal/parse/warning/notice/deprecated on any tab, NO .alert-danger"
+    },
+    "ai_chat_lead_capture": "Ask AI -> chat panel opens (data-testid=chat-panel). Filled lead-name/lead-email/lead-phone and clicked lead-send-btn -> POST /ajax/lead.php 200 + POST /ajax/chat-customer.php 200; bot reply 'Thanks for contacting us, Test! 📞 Please call our support line…' appended to thread; chat-lead-error not shown",
+    "newsletter": "Footer email -> 'Subscribed! You'll receive exclusive deals soon.' toast",
+    "404_handling": "Junk URL /does-not-exist.php returns 200 with stylised 404 (Home / Shop All Products / Contact Us links)",
+    "console": "Only benign 404 console messages for an icon resource — no JS exceptions, no PHP error markup leaked to DOM"
+  },
+
+  "non_issues_clarified": [
+    "/register.php intentionally returns 302 -> /login.php (self-service customer registration is DISABLED by design — confirmed via /app/php-version/register.php comment). Title 'Admin Login' is expected.",
+    "/contact-us.php 404 is expected — canonical contact page is /contact.php and no internal links use /contact-us.php. Footer + 404 page + nav 'Request a Quote' all correctly point to /contact.php.",
+    "Blog list empty / individual posts 404 — per problem statement (AI auto-blogger seeds over time).",
+    "Some admin tab innerText lengths look short (~352 chars) for payment / inventory / blogger — verified visually that pages render correctly; the rest of their UI is in non-text DOM (cards / iframes / canvas) so innerText is naturally smaller. Not a bug."
+  ],
+
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL (UX nicety, not a bug): consider a 301 redirect /contact-us.php -> /contact.php since it's a frequently-guessed URL.",
+    "OPTIONAL (UX nicety): /register.php returns 302 to /login.php; that login form still has title 'Admin Login' which can confuse a customer who reached register.php from an external link. Either remove /register references from sitemap or send the customer to /track-order.php (the documented re-access path)."
+  ],
+
+  "critical_code_review_comments": [
+    "Country-prefix routing in php-version/router.php + .htaccess + includes/functions.php is solid — all 5 regions resolve nested paths (verified /ca/shop, /uk/checkout.php, /ca/about-us.php, /uk/contact.php). Earlier 404 regression on regional country links is fully resolved.",
+    "Currency conversion produces correct symbols (CA$, £, AU$, €, $) and rates are applied consistently to both regular and crossed-out prices in product cards and to cart/checkout/order-success totals.",
+    "DEMO checkout flow correctly bypasses real payment, creates an order with deterministic ID and reaches order-success.php with line items and licence-key copy — good UX for test-mode operators.",
+    "Admin auth + session redirect honour the `next` field correctly; admin.php?tab=* renders cleanly for every nav target with no PHP warnings.",
+    "Theme pre-paint <style> from iter-21 still works — no FOUC on dark mode across pages tested.",
+    "Minor code-quality note (not a bug): the public cart count selector uses a generic `.badge` class — testers had to disambiguate from sidebar count badges. Consider tightening the cart-count node to a single `[data-testid=\"cart-count\"]` (was already present) and avoiding reusing `.badge` on unrelated nav items."
+  ],
+
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (per request, frontend-only)", "frontend": "100% on all critical flows"},
+  "test_credentials": "Admin admin@maventechsoftware.com / Admin@UC2026! (read from /app/memory/test_credentials.md). Coupon MAVEN20.",
+  "seed_data_creation": "Created one DEMO test order #MV2606251EBE6 ($167.99, MAVEN20 applied) and one lead (Test Iter22 / test_iter22_lead@example.com / 5551234567) and one newsletter subscriber (test_iter22@example.com). Safe to leave or clean up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Whole storefront passes E2E. The only two minor cosmetic action items are: (1) add a 301 redirect /contact-us.php -> /contact.php, (2) reconsider what /register.php does (currently 302s to admin login page which can confuse customers). Cart-add AJAX (/ajax/cart.php?action=add) does persist correctly when triggered from the actual product card button — earlier iter-21 note suggesting it didn't persist was based on a direct curl probe; via the real UI button it works (verified order placed for $167.99). Admin tabs all render; verified 16/16."
+}

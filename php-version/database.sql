@@ -1009,7 +1009,7 @@ LOCK TABLES `regions` WRITE;
 /*!40000 ALTER TABLE `regions` DISABLE KEYS */;
 INSERT IGNORE INTO `regions` (`code`, `name`, `currency`, `currency_symbol`, `tax_rate`, `active`) VALUES ('AU','Australia','AUD','A$',0.1000,1);
 INSERT IGNORE INTO `regions` (`code`, `name`, `currency`, `currency_symbol`, `tax_rate`, `active`) VALUES ('CA','Canada','CAD','C$',0.1300,1);
-INSERT IGNORE INTO `regions` (`code`, `name`, `currency`, `currency_symbol`, `tax_rate`, `active`) VALUES ('EU','Europe','EUR','€',0.2000,0);
+INSERT IGNORE INTO `regions` (`code`, `name`, `currency`, `currency_symbol`, `tax_rate`, `active`) VALUES ('EU','Europe','EUR','€',0.2000,1);
 INSERT IGNORE INTO `regions` (`code`, `name`, `currency`, `currency_symbol`, `tax_rate`, `active`) VALUES ('UK','United Kingdom','GBP','£',0.2000,1);
 INSERT IGNORE INTO `regions` (`code`, `name`, `currency`, `currency_symbol`, `tax_rate`, `active`) VALUES ('US','United States','USD','$',0.0000,1);
 /*!40000 ALTER TABLE `regions` ENABLE KEYS */;
