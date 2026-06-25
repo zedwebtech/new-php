@@ -100,7 +100,15 @@ $groups = [
 ?>
 <div class="container py-5" data-testid="sitemap-page">
   <nav aria-label="breadcrumb"><ol class="breadcrumb small"><li class="breadcrumb-item"><a href="index.php">Home</a></li><li class="breadcrumb-item active">Sitemap</li></ol></nav>
-  <h1 class="fw-bold mb-4">Sitemap</h1>
+  <h1 class="fw-bold mb-3">Sitemap</h1>
+  <div class="d-flex flex-wrap align-items-center gap-3 mb-4 p-3 rounded border bg-light" data-testid="sitemap-xml-callout">
+    <span class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded" style="width:40px;height:40px;"><i class="bi bi-filetype-xml fs-5"></i></span>
+    <div class="me-auto">
+      <div class="fw-semibold">Looking for the XML sitemap?</div>
+      <div class="small text-muted mb-0">The machine-readable sitemap for search engines is available as a separate file.</div>
+    </div>
+    <a href="/sitemap.xml" class="btn btn-primary" target="_blank" rel="noopener" data-testid="sitemap-xml-link"><i class="bi bi-box-arrow-up-right me-1"></i>View XML Sitemap</a>
+  </div>
   <div class="row g-4">
     <?php foreach ($groups as $g): ?>
       <div class="col-sm-6 col-lg-4">
