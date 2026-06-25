@@ -307,14 +307,14 @@ if ($path !== '/' && file_exists($file) && !is_dir($file)) {
         readfile($file);
         return true;
     }
-    $longCacheExts = ['css','js','png','jpg','jpeg','gif','webp','avif','svg','ico','woff','woff2','ttf','eot','mp4','webm'];
+    $longCacheExts = ['css','js','png','jpg','jpeg','gif','webp','avif','svg','ico','woff','woff2','ttf','eot','mp4','webm','xsl'];
     if (in_array($ext, $longCacheExts, true)) {
         $mime = [
             'css'=>'text/css; charset=UTF-8','js'=>'application/javascript; charset=UTF-8',
             'png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif',
             'svg'=>'image/svg+xml','webp'=>'image/webp','avif'=>'image/avif','ico'=>'image/x-icon',
             'woff'=>'font/woff','woff2'=>'font/woff2','ttf'=>'font/ttf','eot'=>'application/vnd.ms-fontobject',
-            'mp4'=>'video/mp4','webm'=>'video/webm',
+            'mp4'=>'video/mp4','webm'=>'video/webm','xsl'=>'text/xsl; charset=UTF-8',
         ][$ext] ?? 'application/octet-stream';
 
         // ----- On-the-fly minification for CSS / JS -----
@@ -378,7 +378,7 @@ if ($path !== '/' && file_exists($file) && !is_dir($file)) {
         // so the global ob_gzhandler can gzip them on the wire (style.css drops
         // from ~154 KB to ~25 KB). Binary assets (images/fonts) are already
         // compressed, so we keep Content-Length and serve them as-is.
-        if (!in_array($ext, ['css', 'js', 'svg'], true)) {
+        if (!in_array($ext, ['css', 'js', 'svg', 'xsl'], true)) {
             header('Content-Length: ' . filesize($file), true);
         }
         readfile($file);
