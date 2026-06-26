@@ -566,26 +566,28 @@ echo $initialTheme !== '' ? ' data-bs-theme="' . esc($initialTheme) . '"' : '';
    *  All four tags coexist without conflict — gtag uses dataLayer/gtag,
    *  Bing uses uetq, Clarity uses clarity.
    * ====================================================================== */
-  $tk_ga4       = trim((string)setting_get('ga4_measurement_id',        ''));
-  $tk_gAds      = trim((string)setting_get('google_ads_tag_id',         ''));
+  $tk_ga4       = trim((string)setting_get('ga4_measurement_id',        defined('GA4_MEASUREMENT_ID') ? GA4_MEASUREMENT_ID : ''));
+  $tk_gtag      = trim((string)setting_get('google_tag_id',             defined('GOOGLE_TAG_ID') ? GOOGLE_TAG_ID : ''));
+  $tk_gAds      = trim((string)setting_get('google_ads_tag_id',         defined('GOOGLE_ADS_TAG_ID') ? GOOGLE_ADS_TAG_ID : ''));
   $tk_gAdsLabel = trim((string)setting_get('google_ads_purchase_label', ''));
   $tk_uet       = trim((string)setting_get('bing_uet_tag_id',           ''));
-  $tk_clarity   = trim((string)setting_get('clarity_project_id',        ''));
+  $tk_clarity   = trim((string)setting_get('clarity_project_id',        defined('CLARITY_PROJECT_ID') ? CLARITY_PROJECT_ID : ''));
   ?>
 
-  <?php if ($tk_ga4 !== '' || $tk_gAds !== ''):
-      // Single gtag.js load powers BOTH GA4 + Google Ads.  Use whichever
-      // ID is set first as the gtag/js?id= parameter; we then call
-      // gtag('config', …) for each ID present, which is the official
-      // multi-product pattern from Google.
-      $primaryGtagId = $tk_ga4 !== '' ? $tk_ga4 : $tk_gAds;
+  <?php if ($tk_gtag !== '' || $tk_ga4 !== '' || $tk_gAds !== ''):
+      // Single gtag.js load powers the Google tag (GT-) + GA4 (G-) + Google
+      // Ads (AW-).  We load gtag.js ONCE with a primary id, then call
+      // gtag('config', …) for each id present — Google's official
+      // multi-destination pattern.  Priority: Google tag → GA4 → Ads.
+      $primaryGtagId = $tk_gtag !== '' ? $tk_gtag : ($tk_ga4 !== '' ? $tk_ga4 : $tk_gAds);
   ?>
-  <!-- Google tag (gtag.js) — covers GA4 + Google Ads -->
+  <!-- Google tag (gtag.js) — covers Google tag (GT-) + GA4 + Google Ads -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=<?= esc($primaryGtagId) ?>"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
+    <?php if ($tk_gtag !== ''): ?>gtag('config', '<?= esc($tk_gtag) ?>');<?php endif; ?>
     <?php if ($tk_ga4 !== ''): ?>gtag('config', '<?= esc($tk_ga4) ?>');<?php endif; ?>
     <?php if ($tk_gAds !== ''): ?>gtag('config', '<?= esc($tk_gAds) ?>');<?php endif; ?>
   </script>

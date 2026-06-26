@@ -408,7 +408,7 @@ if (!$isDemo && $order && $order['status'] === 'paid') {
  *  beside our Shopping listings (free, +3-5 % CTR typical).
  *  Spec: https://support.google.com/merchants/answer/7106244
  * ========================================================================== */
-$gmcId = trim((string)setting_get('google_merchant_id', ''));
+$gmcId = trim((string)setting_get('google_merchant_id', defined('GOOGLE_MERCHANT_ID') ? GOOGLE_MERCHANT_ID : ''));
 if ($isPaid && $gmcId !== '' && !empty($order['email'])):
     // Estimated delivery date — for digital downloads this is "today"; Google
     // still requires the field as YYYY-MM-DD.

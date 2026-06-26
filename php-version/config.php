@@ -87,13 +87,26 @@ define('SITE_URL', getenv('SITE_URL') ?: '');
 // Google Search Console verification — paste your GSC meta-tag code here (content="..." value)
 define('GOOGLE_SITE_VERIFICATION', getenv('GOOGLE_SITE_VERIFICATION') ?: '');
 // Bing Webmaster Tools verification (unlocks Copilot + ChatGPT-via-Bing).
-define('BING_SITE_VERIFICATION',   getenv('BING_SITE_VERIFICATION')   ?: '');
+define('BING_SITE_VERIFICATION',   getenv('BING_SITE_VERIFICATION')   ?: 'AF7E1FB430EA67709B92D54FA12FBEB7');
 // Yandex Webmaster verification (used by Yandex search + several AI engines).
 define('YANDEX_SITE_VERIFICATION', getenv('YANDEX_SITE_VERIFICATION') ?: '');
 // Pinterest domain verification (rich pins on product pages).
 define('PINTEREST_SITE_VERIFICATION', getenv('PINTEREST_SITE_VERIFICATION') ?: '');
 // Baidu Webmaster verification (Chinese market — optional).
 define('BAIDU_SITE_VERIFICATION',  getenv('BAIDU_SITE_VERIFICATION')  ?: '');
+
+// --- Analytics & advertising tags (MAVENTECH LLC) ---
+// These are the baked-in DEFAULTS so the tags render even before anything is
+// saved in the admin panel. A value saved in admin → SEO / Tracking ALWAYS
+// overrides the default below (the admin panel writes to the settings table,
+// which is read first; these constants are only the fallback).
+define('GA4_MEASUREMENT_ID', getenv('GA4_MEASUREMENT_ID') ?: '');               // G-XXXXXXXXXX (GA4 — none set yet)
+define('GOOGLE_TAG_ID',      getenv('GOOGLE_TAG_ID')      ?: 'GT-TQV4X72G');    // Google tag (gtag.js loader)
+define('GOOGLE_ADS_TAG_ID',  getenv('GOOGLE_ADS_TAG_ID')  ?: 'AW-18263028048'); // Google Ads conversion tag
+define('CLARITY_PROJECT_ID', getenv('CLARITY_PROJECT_ID') ?: 'xcp5vd09fb');     // Microsoft Clarity project id
+define('GOOGLE_MERCHANT_ID', getenv('GOOGLE_MERCHANT_ID') ?: '5815017210');     // Google Merchant Center id
+// Public-facing company contact / sender email (used across the site & emails).
+define('SITE_EMAIL',         getenv('SITE_EMAIL')         ?: 'services@maventechsoftware.com');
 
 // --- ProAssist upsell price (USD) ---
 define('PRO_ASSIST_PRICE', 47.00);
