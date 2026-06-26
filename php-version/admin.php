@@ -5055,7 +5055,7 @@ elseif ($tab === 'ai-blogger'):
           </div>
           <!-- Google Search Console -->
           <div class="col-md-4">
-            <label class="form-label small fw-semibold">Google Search Console</label>
+            <label class="form-label small fw-semibold d-flex align-items-center justify-content-between"><span>Google Search Console</span><?php if (($gscToken ?? '') !== ''): ?><span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;"><i class="bi bi-check-circle-fill me-1"></i>Set</span><?php else: ?><span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;font-size:9px;"><i class="bi bi-circle me-1"></i>Not set</span><?php endif; ?></label>
             <?php if (($gscToken ?? '') !== ''):
               // Switch the card to amber+warning copy when the stored value
               // doesn't pass the format validator.  Same panel, different
@@ -5096,7 +5096,7 @@ elseif ($tab === 'ai-blogger'):
           </div>
           <!-- Bing Webmaster -->
           <div class="col-md-4">
-            <label class="form-label small fw-semibold">Bing Webmaster</label>
+            <label class="form-label small fw-semibold d-flex align-items-center justify-content-between"><span>Bing Webmaster</span><?php if (($bingToken ?? '') !== ''): ?><span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;"><i class="bi bi-check-circle-fill me-1"></i>Set</span><?php else: ?><span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;font-size:9px;"><i class="bi bi-circle me-1"></i>Not set</span><?php endif; ?></label>
             <?php if (($bingToken ?? '') !== ''):
               $bingBg     = $isValidBing ? '#f0fdf4' : '#fffbeb';
               $bingBorder = $isValidBing ? '#bbf7d0' : '#fde68a';
@@ -5247,6 +5247,16 @@ elseif ($tab === 'ai-blogger'):
     if ($seoYandex) $seoConfigured++;
     if ($seoPint)   $seoConfigured++;
     if ($seoGmc)    $seoConfigured++;
+    // Status pill (matches the green-check style used in the Tracking card):
+    // green check-circle when a token/ID is filled, muted circle when empty.
+    $seoBadge = function (bool $on, string $emptyLabel = 'Not set', string $emptyTone = 'amber'): string {
+        if ($on) {
+            return '<span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;"><i class="bi bi-check-circle-fill me-1"></i>Connected</span>';
+        }
+        $tones = ['amber' => ['#fef3c7', '#92400e'], 'grey' => ['#f1f5f9', '#64748b']];
+        [$bg, $fg] = $tones[$emptyTone] ?? $tones['amber'];
+        return '<span class="badge rounded-pill" style="background:' . $bg . ';color:' . $fg . ';font-size:9px;"><i class="bi bi-circle me-1"></i>' . htmlspecialchars($emptyLabel) . '</span>';
+    };
   ?>
   <div class="card-e mb-3" style="border:1px solid #e2e8f0;border-radius:14px;padding:20px;">
     <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
@@ -5344,11 +5354,7 @@ elseif ($tab === 'ai-blogger'):
             <div class="d-flex align-items-center gap-2 mb-2">
               <img src="https://www.google.com/favicon.ico" alt="" style="width:18px;height:18px;">
               <strong class="platform-name" style="font-size:13px;">Google Search Console</strong>
-              <?php if ($seoGsc): ?>
-                <span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;">Connected</span>
-              <?php else: ?>
-                <span class="badge rounded-pill" style="background:#fef3c7;color:#92400e;font-size:9px;">Not set</span>
-              <?php endif; ?>
+              <?= $seoBadge((bool)$seoGsc, 'Not set', 'amber') ?>
             </div>
             <input type="text" name="google_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoGsc ? substr($seoGsc, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
             <div class="small mt-1">
@@ -5365,11 +5371,7 @@ elseif ($tab === 'ai-blogger'):
             <div class="d-flex align-items-center gap-2 mb-2">
               <img src="https://www.bing.com/favicon.ico" alt="" style="width:18px;height:18px;">
               <strong class="platform-name" style="font-size:13px;">Bing Webmaster Tools</strong>
-              <?php if ($seoBing): ?>
-                <span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;">Connected</span>
-              <?php else: ?>
-                <span class="badge rounded-pill" style="background:#fef3c7;color:#92400e;font-size:9px;">Not set</span>
-              <?php endif; ?>
+              <?= $seoBadge((bool)$seoBing, 'Not set', 'amber') ?>
             </div>
             <input type="text" name="bing_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoBing ? substr($seoBing, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
             <div class="small mt-1">
@@ -5386,11 +5388,7 @@ elseif ($tab === 'ai-blogger'):
             <div class="d-flex align-items-center gap-2 mb-2">
               <i class="bi bi-search" style="font-size:16px;color:#ff0000;"></i>
               <strong class="platform-name" style="font-size:13px;">Yandex Webmaster</strong>
-              <?php if ($seoYandex): ?>
-                <span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;">Connected</span>
-              <?php else: ?>
-                <span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;font-size:9px;">Optional</span>
-              <?php endif; ?>
+              <?= $seoBadge((bool)$seoYandex, 'Optional', 'grey') ?>
             </div>
             <input type="text" name="yandex_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoYandex ? substr($seoYandex, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
             <div class="small mt-1">
@@ -5407,11 +5405,7 @@ elseif ($tab === 'ai-blogger'):
             <div class="d-flex align-items-center gap-2 mb-2">
               <i class="bi bi-pinterest" style="font-size:16px;color:#e60023;"></i>
               <strong class="platform-name" style="font-size:13px;">Pinterest</strong>
-              <?php if ($seoPint): ?>
-                <span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;">Connected</span>
-              <?php else: ?>
-                <span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;font-size:9px;">Optional</span>
-              <?php endif; ?>
+              <?= $seoBadge((bool)$seoPint, 'Optional', 'grey') ?>
             </div>
             <input type="text" name="pinterest_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoPint ? substr($seoPint, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
             <div class="small mt-1">
@@ -5428,11 +5422,7 @@ elseif ($tab === 'ai-blogger'):
             <div class="d-flex align-items-center gap-2 mb-2">
               <i class="bi bi-bag-check" style="font-size:16px;color:#4285f4;"></i>
               <strong class="platform-name" style="font-size:13px;">Google Merchant Center</strong>
-              <?php if ($seoGmc): ?>
-                <span class="badge rounded-pill" style="background:#d1fae5;color:#065f46;font-size:9px;">Connected</span>
-              <?php else: ?>
-                <span class="badge rounded-pill" style="background:#fef3c7;color:#92400e;font-size:9px;">Recommended</span>
-              <?php endif; ?>
+              <?= $seoBadge((bool)$seoGmc, 'Recommended', 'amber') ?>
             </div>
             <input type="text" name="google_merchant_id" class="form-control form-control-sm" placeholder="<?= $seoGmc ? $seoGmc : 'Paste Merchant Center ID here' ?>" style="font-size:12px;">
             <div class="small mt-1">
