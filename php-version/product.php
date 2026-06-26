@@ -163,14 +163,30 @@ if ($schemaImage === '') {
     $schemaImage = rtrim(site_url(), '/') . '/og-default.png';
 }
 
+// sku — Google's merchant-listing spec caps `sku` at 50 chars. Use the
+// product's real SKU column (e.g. "SKU-04377215"); fall back to a
+// length-capped slug only when no SKU is set so the field is always valid.
+$schemaSku = trim((string)($product['sku'] ?? ''));
+if ($schemaSku === '') {
+    $schemaSku = substr((string)$product['slug'], 0, 50);
+}
+// mpn — keep under Google's 70-char limit.
+$schemaMpn = substr((string)$product['slug'], 0, 70);
+// description — required by Google; guarantee a non-empty value so a product
+// with no meta/SEO description never trips "Missing field description".
+$schemaDescription = trim((string)$pageDescription);
+if ($schemaDescription === '') {
+    $schemaDescription = $product['name'] . ' — genuine lifetime license key with instant digital email delivery in 15-30 minutes.';
+}
+
 $jsonLd = [
     '@context'    => 'https://schema.org',
     '@type'       => 'Product',
     'name'        => $product['name'],
     'image'       => [$schemaImage],
-    'description' => $pageDescription,
-    'sku'         => $product['slug'],
-    'mpn'         => $product['slug'],
+    'description' => $schemaDescription,
+    'sku'         => $schemaSku,
+    'mpn'         => $schemaMpn,
     'gtin13'      => $product['gtin'] ?? null,
     'brand'       => ['@type' => 'Brand', 'name' => $detectedBrand],
     'category'    => ucfirst((string)($product['category'] ?? 'Software')),    'offers'      => [
@@ -208,8 +224,12 @@ $jsonLd = [
                 'doesNotShip'       => false,
                 'deliveryTime'      => [
                     '@type'        => 'ShippingDeliveryTime',
-                    'handlingTime' => ['@type' => 'QuantitativeValue', 'minValue' => 0, 'maxValue' => 0, 'unitCode' => 'HUR'],
-                    'transitTime'  => ['@type' => 'QuantitativeValue', 'minValue' => 0, 'maxValue' => 1, 'unitCode' => 'HUR'],
+                    // Google's merchant-listing spec only accepts unitCode
+                    // "DAY" (or "d") for handling/transit time — "HUR" is an
+                    // invalid enum value and suppresses the shipping rich
+                    // result.  Digital delivery = same business day (0 days).
+                    'handlingTime' => ['@type' => 'QuantitativeValue', 'minValue' => 0, 'maxValue' => 0, 'unitCode' => 'DAY'],
+                    'transitTime'  => ['@type' => 'QuantitativeValue', 'minValue' => 0, 'maxValue' => 1, 'unitCode' => 'DAY'],
                 ],
             ];
         }, ['US', 'GB', 'CA', 'AU', 'IN', 'AE']),
