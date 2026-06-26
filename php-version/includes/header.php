@@ -425,7 +425,6 @@ echo $initialTheme !== '' ? ' data-bs-theme="' . esc($initialTheme) . '"' : '';
                     'about'         => ['@id' => site_url() . '/#organization'],
                 ],
             ],
-            'aggregateRating'    => $orgRating,
         ]),
         // Explicit Brand node — gives AI engines a single authoritative
         // anchor for the brand identity (logo, slogan, ratings) that they
@@ -437,7 +436,6 @@ echo $initialTheme !== '' ? ' data-bs-theme="' . esc($initialTheme) . '"' : '';
             'logo'  => $brandLogoAbs,
             'slogan'=> 'Genuine software licences. Instant digital delivery.',
             'url'   => site_url() . '/',
-            'aggregateRating' => $orgRating,
         ]),
         // LocalBusiness — qualifies for AI "near me" answers + Google's
         // local map panel.  Only emitted when we have a real street address.
@@ -475,7 +473,6 @@ echo $initialTheme !== '' ? ' data-bs-theme="' . esc($initialTheme) . '"' : '';
                     'closes'    => '14:00',
                 ],
             ],
-            'aggregateRating' => $orgRating,
         ]) : null,
         [
             '@type' => 'WebSite',
