@@ -192,8 +192,14 @@ $jsonLd = [
     'category'    => ucfirst((string)($product['category'] ?? 'Software')),    'offers'      => [
         '@type'         => 'Offer',
         'url'           => site_url() . '/product.php?slug=' . $product['slug'],
-        'priceCurrency' => current_currency()['code'] ?? 'USD',
-        'price'         => (string)$product['price'],
+        'priceCurrency' => $_cc['code'] ?? 'USD',
+        // Price MUST be in the SAME currency as priceCurrency and match the
+        // visible (converted) price.  On the regional storefronts (/uk, /au,
+        // /ca, /eu) priceCurrency becomes GBP/AUD/CAD/EUR while the raw value
+        // was still the USD base — a price/currency mismatch Google flags under
+        // Product snippets + Merchant listings.  format_price() multiplies the
+        // base by the FX rate for display, so we mirror that here.
+        'price'         => number_format((float)$product['price'] * (float)($_cc['rate'] ?? 1), 2, '.', ''),
         'availability'  => $availability,
         'itemCondition' => 'https://schema.org/NewCondition',
         // priceValidUntil honours the per-product `sale_ends_at` window
@@ -216,10 +222,10 @@ $jsonLd = [
         // For a 100% digital-delivery business, every rule is zero-cost
         // zero-transit-time, which unlocks the "Free delivery" badge in
         // Google Shopping.
-        'shippingDetails' => array_map(function ($iso) {
+        'shippingDetails' => array_map(function ($iso) use ($_cc) {
             return [
                 '@type'             => 'OfferShippingDetails',
-                'shippingRate'      => ['@type' => 'MonetaryAmount', 'value' => '0', 'currency' => 'USD'],
+                'shippingRate'      => ['@type' => 'MonetaryAmount', 'value' => '0', 'currency' => $_cc['code'] ?? 'USD'],
                 'shippingDestination' => ['@type' => 'DefinedRegion', 'addressCountry' => $iso],
                 'doesNotShip'       => false,
                 'deliveryTime'      => [
