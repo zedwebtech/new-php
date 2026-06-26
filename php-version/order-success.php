@@ -181,7 +181,7 @@ if ($order && $order['status'] === 'paid') {
         } else {
             $stIt = db()->prepare(
                 'SELECT oi.product_slug, oi.name, oi.qty, oi.price,
-                        p.image, p.brand, p.activation_url, p.install_guide_url, p.installer_url
+                        p.image, p.brand, p.gtin, p.activation_url, p.install_guide_url, p.installer_url
                  FROM order_items oi
                  LEFT JOIN products p ON p.slug = oi.product_slug
                  WHERE oi.order_id = ?'
@@ -413,6 +413,16 @@ if ($isPaid && $gmcId !== '' && !empty($order['email'])):
     // Estimated delivery date — for digital downloads this is "today"; Google
     // still requires the field as YYYY-MM-DD.
     $estDelivery = date('Y-m-d');
+    // Optional products[] GTIN array — lets Google attach the survey response
+    // to specific products (product-level seller ratings).  Only GTIN-bearing
+    // items are included; products without a GTIN are simply skipped.
+    $optInGtins = [];
+    if (!empty($orderItems) && is_array($orderItems)) {
+        foreach ($orderItems as $oi) {
+            $g = trim((string)($oi['gtin'] ?? ''));
+            if ($g !== '') $optInGtins[] = ['gtin' => $g];
+        }
+    }
 ?>
     <!-- Google Customer Reviews opt-in -->
     <script src="https://apis.google.com/js/platform.js?onload=renderOptIn" async defer></script>
@@ -424,7 +434,8 @@ if ($isPaid && $gmcId !== '' && !empty($order['email'])):
                 "order_id":                <?= json_encode((string)$order['order_number']) ?>,
                 "email":                   <?= json_encode((string)$order['email']) ?>,
                 "delivery_country":        <?= json_encode((string)($order['country'] ?? 'US')) ?>,
-                "estimated_delivery_date": <?= json_encode($estDelivery) ?>
+                "estimated_delivery_date": <?= json_encode($estDelivery) ?><?php if (!empty($optInGtins)): ?>,
+                "products":                <?= json_encode($optInGtins) ?><?php endif; ?>
             });
         });
     };

@@ -158,6 +158,27 @@
   </div>
 </footer>
 
+<?php
+/* Google Customer Reviews — seller-rating badge (optional, site-wide).
+   Renders only when a Merchant Center ID is configured.  Position defaults
+   to BOTTOM_LEFT so it never collides with the bottom-right chat bubble. */
+$gcrMid = trim((string)setting_get('google_merchant_id', defined('GOOGLE_MERCHANT_ID') ? GOOGLE_MERCHANT_ID : ''));
+$gcrPos = trim((string)setting_get('gcr_badge_position', 'BOTTOM_LEFT'));
+if ($gcrMid !== '' && ctype_digit($gcrMid)):
+?>
+<!-- Google Customer Reviews badge -->
+<script id="merchantWidgetScript" src="https://www.gstatic.com/shopping/merchant/merchantwidget.js" defer></script>
+<script>
+  merchantWidgetScript.addEventListener('load', function () {
+    merchantwidget.start({
+      merchant_id: <?= (int)$gcrMid ?>,
+      position: "<?= esc($gcrPos) ?>"
+    });
+  });
+</script>
+<!-- end Google Customer Reviews badge -->
+<?php endif; ?>
+
 <!-- AI chat widget -->
 <button id="chat-bubble" onclick="toggleChat()" aria-label="Open chat" data-testid="chat-bubble">
   <i class="bi bi-chat-dots"></i>
