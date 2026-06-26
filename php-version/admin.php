@@ -5356,7 +5356,7 @@ elseif ($tab === 'ai-blogger'):
               <strong class="platform-name" style="font-size:13px;">Google Search Console</strong>
               <?= $seoBadge((bool)$seoGsc, 'Not set', 'amber') ?>
             </div>
-            <input type="text" name="google_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoGsc ? substr($seoGsc, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
+            <input type="text" name="google_site_verification_token" class="form-control form-control-sm" value="<?= esc($seoGsc) ?>" placeholder="Paste verification token here" style="font-size:12px;">
             <div class="small mt-1">
               <span class="text-secondary">Get it from </span>
               <a href="https://search.google.com/search-console" target="_blank" class="text-primary text-decoration-none">search.google.com/search-console <i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i></a>
@@ -5373,7 +5373,7 @@ elseif ($tab === 'ai-blogger'):
               <strong class="platform-name" style="font-size:13px;">Bing Webmaster Tools</strong>
               <?= $seoBadge((bool)$seoBing, 'Not set', 'amber') ?>
             </div>
-            <input type="text" name="bing_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoBing ? substr($seoBing, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
+            <input type="text" name="bing_site_verification_token" class="form-control form-control-sm" value="<?= esc($seoBing) ?>" placeholder="Paste verification token here" style="font-size:12px;">
             <div class="small mt-1">
               <span class="text-secondary">Get it from </span>
               <a href="https://www.bing.com/webmasters" target="_blank" class="text-primary text-decoration-none">bing.com/webmasters <i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i></a>
@@ -5390,7 +5390,7 @@ elseif ($tab === 'ai-blogger'):
               <strong class="platform-name" style="font-size:13px;">Yandex Webmaster</strong>
               <?= $seoBadge((bool)$seoYandex, 'Optional', 'grey') ?>
             </div>
-            <input type="text" name="yandex_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoYandex ? substr($seoYandex, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
+            <input type="text" name="yandex_site_verification_token" class="form-control form-control-sm" value="<?= esc($seoYandex) ?>" placeholder="Paste verification token here" style="font-size:12px;">
             <div class="small mt-1">
               <span class="text-secondary">Get it from </span>
               <a href="https://webmaster.yandex.com" target="_blank" class="text-primary text-decoration-none">webmaster.yandex.com <i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i></a>
@@ -5407,7 +5407,7 @@ elseif ($tab === 'ai-blogger'):
               <strong class="platform-name" style="font-size:13px;">Pinterest</strong>
               <?= $seoBadge((bool)$seoPint, 'Optional', 'grey') ?>
             </div>
-            <input type="text" name="pinterest_site_verification_token" class="form-control form-control-sm" placeholder="<?= $seoPint ? substr($seoPint, 0, 10) . '••••' : 'Paste verification token here' ?>" style="font-size:12px;">
+            <input type="text" name="pinterest_site_verification_token" class="form-control form-control-sm" value="<?= esc($seoPint) ?>" placeholder="Paste verification token here" style="font-size:12px;">
             <div class="small mt-1">
               <span class="text-secondary">Get it from </span>
               <a href="https://business.pinterest.com/settings/" target="_blank" class="text-primary text-decoration-none">business.pinterest.com <i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i></a>
@@ -5424,7 +5424,7 @@ elseif ($tab === 'ai-blogger'):
               <strong class="platform-name" style="font-size:13px;">Google Merchant Center</strong>
               <?= $seoBadge((bool)$seoGmc, 'Recommended', 'amber') ?>
             </div>
-            <input type="text" name="google_merchant_id" class="form-control form-control-sm" placeholder="<?= $seoGmc ? $seoGmc : 'Paste Merchant Center ID here' ?>" style="font-size:12px;">
+            <input type="text" name="google_merchant_id" class="form-control form-control-sm" value="<?= esc($seoGmc) ?>" placeholder="Paste Merchant Center ID here" style="font-size:12px;">
             <div class="small mt-1">
               <span class="text-secondary">Get it from </span>
               <a href="https://merchants.google.com" target="_blank" class="text-primary text-decoration-none">merchants.google.com <i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i></a>
