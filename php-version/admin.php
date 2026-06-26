@@ -6833,13 +6833,24 @@ elseif ($tab === 'company'):
     $vsVibes = brand_vibes();
     $vsNow = time();
   ?>
+  <style>
+    .vibe-sched-chevron { transition: transform .2s ease; }
+    .vibe-sched-toggle[aria-expanded="true"] .vibe-sched-chevron { transform: rotate(180deg); }
+    .vibe-sched-toggle:hover h2 { color: var(--bs-primary, #0d6efd); }
+  </style>
   <div class="card-e p-4 mb-3 vibe-sched-card" data-testid="vibe-schedule-card">
-    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 vibe-sched-toggle" role="button" tabindex="0"
+         data-bs-toggle="collapse" data-bs-target="#vibe-sched-body"
+         aria-expanded="<?= !empty($vsRows) ? 'true' : 'false' ?>" aria-controls="vibe-sched-body"
+         style="cursor:pointer;" data-testid="vibe-schedule-toggle"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
       <div>
-        <h2 class="h6 fw-bold mb-1"><i class="bi bi-calendar-event text-primary me-1"></i> Schedule a Brand Vibe switch</h2>
+        <h2 class="h6 fw-bold mb-1"><i class="bi bi-calendar-event text-primary me-1"></i> Schedule a Brand Vibe switch <span class="badge text-bg-light text-secondary border ms-1 align-middle" style="font-size:.58rem;font-weight:500;">click to expand</span></h2>
         <small class="text-muted">Queue future re-skins (Black Friday → Playful, January → Premium). The active schedule auto-applies on every page load — no cron needed.</small>
       </div>
+      <i class="bi bi-chevron-down fs-5 text-secondary vibe-sched-chevron"></i>
     </div>
+    <div class="collapse <?= !empty($vsRows) ? 'show' : '' ?>" id="vibe-sched-body" data-testid="vibe-schedule-body">
     <form method="post" enctype="multipart/form-data" class="row g-2 align-items-end mb-3" data-testid="vibe-schedule-form">
       <input type="hidden" name="action" value="add_vibe_schedule">
       <div class="col-md-2">
@@ -6950,6 +6961,7 @@ elseif ($tab === 'company'):
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
+    </div><!-- /#vibe-sched-body -->
   </div>
 
   <!-- Where it shows up -->
