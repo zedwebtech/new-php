@@ -1077,3 +1077,17 @@ The store already had extensive, valid JSON-LD (Organization, LocalBusiness, Web
 - admin.php SEO & Tracking card: added "Google Review Link" full-width URL input (testid tk-grev-input) with the same green/grey Set/Not set pill ($tkStatus). Reads setting google_review_url (default GOOGLE_REVIEW_URL).
 - save_tracking_ids handler: URL-validated separately via filter_var (FILTER_VALIDATE_URL); empty clears it, invalid is ignored + flagged in the flash.
 - order-success.php already reads google_review_url, so admin now controls both the standalone Google review card and the post-submit "Post my review on Google" share button. Verified login→save→persist via Playwright; restored real link https://g.page/r/CY0H1wdUhWorEBM/review.
+
+## 2026-06 — Blog posts get NEW contextual images (not the product photo)
+- Requirement: admin-generated blog posts (Write One Post / Random Post / auto-blogger / trends) must use a fresh, varied lifestyle image (software on a laptop, person working) — NOT the product's own catalog image; every post different.
+- includes/product-image.php: added mv_build_blog_image_prompt() (10 rotating photoreal lifestyle scenes, picked by md5(seed) so each post differs; screen shows generic dashboard, no logos/text), mv_blog_stock_fallback() (12-photo workspace Unsplash pool, seeded pick), mv_generate_blog_image() (gpt-image-1 via Emergent images endpoint, 1536x1024, saves /uploads/blog/<postId>.webp).
+- includes/seo-bot.php: _seo_generate_one_blog_post() and seo_publish_featured_trends_article() now call mv_generate_blog_image() AFTER $postId is finalized; fall back to mv_blog_stock_fallback() (never $product['image']).
+- Added EMERGENT_LLM_KEY to /app/php-version/.env (git-ignored) so image-gen + auto-blogger work in preview. PROD: user must set their own AI key in Admin → API Keys / env; without it, posts use varied workspace stock (still not product image, still distinct per post).
+- Verified: generated 1 US post → /uploads/blog/...webp (35KB); image analysis confirmed contextual scene (businessperson at laptop with dashboard, no logos). Test post + script removed afterward.
+
+## 2026-06 — "Regenerate blog image" button (Admin → AI Auto-Blogger → Published Blog Posts)
+- Each post row now has a circular refresh button (testid regen-blog-image-N) that spins a NEW contextual lifestyle image on demand.
+- Backend: admin.php action 'regen_blog_image' (after regen_product_image). Loads post+product, requires seo-bot.php (for _seo_resolve_llm_credentials) THEN product-image.php, calls mv_generate_blog_image($prod,$postId,$randomSeed) — random seed = different scene each click, overwrites /uploads/blog/<id>.webp in place; updates blog_posts.image. If AI key/budget unavailable, rotates to a different mv_blog_stock_fallback() photo (never product image). Returns {ok,image,ai}.
+- IMPORTANT FIX: seo-bot.php is NOT globally included in admin.php (only inside specific handlers), so the handler MUST require it or mv_product_image_creds() can't resolve the key → silently fell back to stock. Handler now requires seo-bot.php first.
+- Frontend JS regenBlogImage(): POSTs, swaps the thumbnail src with cache-bust ?t=, spin animation, handles empty-thumb placeholder. CSS .post-regen + pr-spin keyframe; dark-mode styled.
+- Verified via curl (ai:true, ~20s, file mtime+size changed) and Playwright browser (in-place refresh to /uploads/blog/...webp?t=). Test posts + seed script removed.

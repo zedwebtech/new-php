@@ -1539,7 +1539,10 @@ SYS;
     $title    = mb_substr(trim((string)$j['title']), 0, 200);
     $readTime = mb_substr(trim((string)($j['read_time'] ?? '5 min read')), 0, 20) ?: '5 min read';
     $content  = _seo_blog_sanitize_html((string)$j['content_html']);
-    $image    = (string)$product['image'] ?: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=872&auto=format&fit=crop';
+    // Blog cover image is generated AFTER $postId is known (see below) so each
+    // post gets its own distinct, contextual lifestyle image — never the
+    // product's own catalog photo.
+    $image    = '';
 
     // AEO: Extract FAQ data if present (for FAQ Schema markup)
     $faqJson  = null;
@@ -1581,6 +1584,26 @@ SYS;
     $existing->execute([$postId]);
     if ($existing->fetchColumn()) {
         $postId .= '-' . substr(bin2hex(random_bytes(2)), 0, 4);
+    }
+
+    // Generate a NEW contextual lifestyle cover image (software shown in use on
+    // a laptop / a person working) — never the product's own catalog image.
+    // Each post gets a distinct scene; falls back to a varied workspace stock
+    // photo if AI image-gen is unavailable or the key budget is exhausted.
+    require_once __DIR__ . '/product-image.php';
+    $imgSeed = $postId . '|' . (string)($product['slug'] ?? '');
+    if (function_exists('mv_generate_blog_image')) {
+        $imgRes = mv_generate_blog_image($product, $postId, $imgSeed);
+        if (!empty($imgRes['ok']) && !empty($imgRes['image'])) {
+            $image = $imgRes['image'];
+        } else {
+            $report['errors'][] = "blog[$targetRegion]: image-gen fell back to stock — " . ($imgRes['error'] ?? 'unknown');
+        }
+    }
+    if ($image === '') {
+        $image = function_exists('mv_blog_stock_fallback')
+            ? mv_blog_stock_fallback($imgSeed)
+            : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop';
     }
 
     // Count internal anchor links (the "backend links" SEO signal) and
@@ -1867,12 +1890,26 @@ SYS;
     // Allow <blockquote> in trends articles even though the strict sanitiser
     // strips it — re-add by running our own pass.
     $content  = preg_replace_callback('/&lt;(\/?)blockquote&gt;/i', fn($m) => '<' . $m[1] . 'blockquote>', $content);
-    $image    = (string)$product['image'] ?: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=872&auto=format&fit=crop';
+    // Distinct contextual cover image (set after $postId below).
+    $image    = '';
 
     $postId = 'ai-trends-' . date('Ymd') . '-' . substr(preg_replace('/[^a-z0-9]+/i', '-', strtolower($product['slug'])), 0, 50);
     $exists = $pdo->prepare('SELECT 1 FROM blog_posts WHERE id = ?');
     $exists->execute([$postId]);
     if ($exists->fetchColumn()) $postId .= '-' . substr(bin2hex(random_bytes(2)), 0, 4);
+
+    // New contextual lifestyle cover image — never the product catalog photo.
+    require_once __DIR__ . '/product-image.php';
+    $imgSeed = $postId . '|' . (string)($product['slug'] ?? '');
+    if (function_exists('mv_generate_blog_image')) {
+        $imgRes = mv_generate_blog_image($product, $postId, $imgSeed);
+        if (!empty($imgRes['ok']) && !empty($imgRes['image'])) $image = $imgRes['image'];
+    }
+    if ($image === '') {
+        $image = function_exists('mv_blog_stock_fallback')
+            ? mv_blog_stock_fallback($imgSeed)
+            : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop';
+    }
 
     $internalLinks = preg_match_all('/href=\"(product\.php|category\.php|blog-post\.php|shop\.php|page\.php|brand\.php)/i', $content);
     $fingerprint   = hash('sha1', preg_replace('/\s+/', ' ', trim(strip_tags($content))));

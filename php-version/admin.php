@@ -449,6 +449,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit;
 
+    } elseif ($action === 'regen_blog_image') {
+        // ---------------------------------------------------------------------
+        // AJAX: regenerate a FRESH contextual lifestyle cover image for ONE
+        // blog post (by post id).  A random seed picks a different scene each
+        // time, overwriting /uploads/blog/<id>.webp in place.  If the AI key /
+        // budget is unavailable, rotate to a different varied workspace stock
+        // photo so the button always changes the image.
+        // ---------------------------------------------------------------------
+        header('Content-Type: application/json');
+        $postId = trim($_POST['post_id'] ?? '');
+        if ($postId === '') { echo json_encode(['ok' => false, 'error' => 'Missing post id']); exit; }
+
+        $st = $pdo->prepare("SELECT bp.id, bp.product_id, p.slug, p.name, p.brand, p.category, p.platform, p.apps
+                               FROM blog_posts bp LEFT JOIN products p ON p.id = bp.product_id
+                              WHERE bp.id = ? LIMIT 1");
+        $st->execute([$postId]);
+        $row = $st->fetch();
+        if (!$row) { echo json_encode(['ok' => false, 'error' => 'Post not found']); exit; }
+
+        $prod = [
+            'slug'     => (string)($row['slug']     ?? $postId),
+            'name'     => (string)($row['name']     ?? 'software'),
+            'brand'    => (string)($row['brand']    ?? ''),
+            'category' => (string)($row['category'] ?? 'software'),
+            'platform' => (string)($row['platform'] ?? ''),
+            'apps'     => (string)($row['apps']     ?? ''),
+        ];
+
+        require_once __DIR__ . '/includes/seo-bot.php';
+        require_once __DIR__ . '/includes/product-image.php';
+        set_time_limit(120);
+        $seed = $postId . '|' . bin2hex(random_bytes(4)); // randomised → different scene each click
+        $res  = function_exists('mv_generate_blog_image')
+            ? mv_generate_blog_image($prod, $postId, $seed)
+            : ['ok' => false, 'error' => 'Image generator unavailable.'];
+
+        $newImg = (!empty($res['ok']) && !empty($res['image']))
+            ? $res['image']
+            : (function_exists('mv_blog_stock_fallback') ? mv_blog_stock_fallback($seed) : '');
+
+        if ($newImg !== '') {
+            $pdo->prepare('UPDATE blog_posts SET image = ?, updated_at = NOW() WHERE id = ?')->execute([$newImg, $postId]);
+            echo json_encode(['ok' => true, 'image' => $newImg, 'ai' => !empty($res['ok'])]);
+        } else {
+            echo json_encode(['ok' => false, 'error' => $res['error'] ?? 'Image generation failed.']);
+        }
+        exit;
+
     } elseif ($action === 'toggle_product') {
         $pdo->prepare('UPDATE products SET is_active=1-is_active WHERE slug=?')->execute([$_POST['slug']]);
         header('Location: admin.php?tab=products&msg=Status+toggled'); exit;
@@ -5577,6 +5625,14 @@ elseif ($tab === 'ai-blogger'):
             <span class="post-flag" title="Targeted country: <?= esc($rLabel) ?>"><?= $rFlag ?> <span class="post-flag-label"><?= esc($rLabel) ?></span></span>
             <span class="post-date"><?= $postDate ?></span>
             <span class="badge rounded-pill post-status" title="<?= esc($statusTitle) ?>" style="background:#166534;color:#bbf7d0;">Live</span>
+            <span class="post-regen" role="button" tabindex="0"
+                  title="Regenerate a fresh AI cover image for this post"
+                  data-post-id="<?= esc($bp['id']) ?>"
+                  data-testid="regen-blog-image-<?= $i ?>"
+                  onclick="regenBlogImage(event, this)"
+                  onkeydown="if(event.key==='Enter'||event.key===' '){regenBlogImage(event, this);}">
+              <i class="bi bi-arrow-repeat"></i>
+            </span>
             <i class="bi bi-chevron-right post-arrow"></i>
           </a>
         <?php endforeach; ?>
@@ -5584,6 +5640,45 @@ elseif ($tab === 'ai-blogger'):
       <?php if (count($aiAllUnfiltered) >= 50): ?>
         <div class="text-center mt-2"><span class="text-secondary" style="font-size:11px;">Showing first 50</span></div>
       <?php endif; ?>
+      <style>
+        .post-regen{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#2563eb;background:#eff6ff;border:1px solid #dbeafe;flex-shrink:0;transition:background .15s,color .15s,transform .12s;cursor:pointer;}
+        .post-regen:hover{background:#2563eb;color:#fff;transform:rotate(45deg);}
+        .post-regen.is-busy{pointer-events:none;opacity:.7;}
+        .post-regen.is-busy i{animation:pr-spin .7s linear infinite;}
+        @keyframes pr-spin{to{transform:rotate(360deg);}}
+        [data-bs-theme="dark"] .post-regen{background:#1e293b;border-color:#334155;color:#60a5fa;}
+        [data-bs-theme="dark"] .post-regen:hover{background:#2563eb;color:#fff;}
+      </style>
+      <script>
+        function regenBlogImage(ev, el){
+          ev.preventDefault(); ev.stopPropagation();
+          var id = el.getAttribute('data-post-id');
+          if (!id || el.classList.contains('is-busy')) return;
+          el.classList.add('is-busy');
+          var fd = new FormData();
+          fd.append('action', 'regen_blog_image');
+          fd.append('post_id', id);
+          fetch('admin.php', { method:'POST', body: fd, credentials:'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+              el.classList.remove('is-busy');
+              if (d && d.ok && d.image){
+                var row = el.closest('.post-row');
+                var bust = d.image + (d.image.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+                var img = row ? row.querySelector('img.post-thumb') : null;
+                if (img){ img.src = bust; }
+                else if (row){
+                  var ph = row.querySelector('.post-thumb-empty');
+                  if (ph){ var ni = document.createElement('img'); ni.className='post-thumb'; ni.alt=''; ni.src=bust; ph.replaceWith(ni); }
+                }
+                if (typeof showToast === 'function') showToast(d.ai ? 'Fresh AI image generated' : 'New image applied');
+              } else {
+                alert((d && d.error) ? d.error : 'Could not regenerate the image.');
+              }
+            })
+            .catch(function(){ el.classList.remove('is-busy'); alert('Network error — please try again.'); });
+        }
+      </script>
       <?php else: ?>
       <div class="text-center py-3" style="color:#64748b;">
         <i class="bi bi-journal-x" style="font-size:28px;"></i>
