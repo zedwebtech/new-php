@@ -88,7 +88,7 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 { font-weight: 650; }
 
 /* ---------- Brand logo ---------- */
 .brand-mark { flex-shrink: 0; filter: drop-shadow(0 4px 10px rgba(6, 182, 212, .35)); }
-.brand-text { font-weight: 700; letter-spacing: -.02em; font-size: 1.02rem; color: var(--bs-emphasis-color); }
+.brand-text { font-weight: 700; letter-spacing: .02em; font-size: 1.02rem; color: var(--bs-emphasis-color); text-transform: uppercase; }
 .brand-grad { background: linear-gradient(90deg, #06b6d4, #2dd4bf); -webkit-background-clip: text; background-clip: text; color: transparent; }
 [data-bs-theme="dark"] .brand-grad, .footer-dark .brand-grad { background: linear-gradient(90deg, #06b6d4, #2dd4bf); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .brand-tag { display: block; font-size: .58rem; letter-spacing: .16em; font-weight: 600; color: var(--bs-secondary-color); }

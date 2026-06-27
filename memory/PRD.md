@@ -1053,3 +1053,10 @@ The store already had extensive, valid JSON-LD (Organization, LocalBusiness, Web
 - header.php: Organization + LocalBusiness `logo`/`image` were relative — added `$brandLogoAbs` (absolute) used in all 3 schema spots; falls back to /assets/images/favicon/icon-512.png.
 - Validated: all JSON-LD blocks parse as valid JSON on home/product/shop/category/contact (0 invalid).
 - RATINGS NOTE: AggregateRating is correctly review-backed and only emits when published reviews exist (Google policy). Currently 0 published reviews in customer_reviews, so star ratings won't appear in SERP until real post-purchase reviews come in — intentionally NOT seeding fake reviews (manual-action risk).
+
+## 2026-06 — Company name consistency fix
+- User requirement: the company name from Company Info must render identically on every page; never show "Maventech Software", only the configured name ("Maventech").
+- Root cause: 6 DB `pages` rows (disclaimer, faqs, help-center, my-account, terms-of-service, why-choose-us) had hardcoded "Maventech Software" brand text (7 occurrences). Seed `database.sql` was already clean (uses {{company_name}}); email_templates clean too.
+- Fix: UPDATE pages SET content = REPLACE(content,'Maventech Software','{{company_name}}'). The existing company_placeholders_apply() in functions.php resolves {{company_name}} → company_info()['name'] at render, so any future rename in admin Company Info propagates everywhere automatically.
+- Verified via curl on /page.php?slug=disclaimer|terms-of-service|faqs: only "Maventech" renders; lowercase "maventech" remaining are @maventechsoftware.com email links (correct, untouched). No leftover {{}} tokens.
+- email_outbox holds 5 historical sent-mail records still containing the old string — left as-is (immutable records, no future effect).
