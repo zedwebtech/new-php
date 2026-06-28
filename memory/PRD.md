@@ -1132,3 +1132,10 @@ The store already had extensive, valid JSON-LD (Organization, LocalBusiness, Web
 - Fix (product.php, "Description" tab #tab-desc ~line 615): replaced the generic hardcoded paragraph with a small inline renderer that parses the stored description — "•/▪/◦/-/*" lines grouped into a styled <ul>, other non-empty lines become <p>. Wrapped in data-testid="product-description". Falls back to the old generic blurb only when description is empty. The existing feature bullets (licensed/full version/free updates) + GTIN/SKU/Brand identifier strip remain below it.
 - Verified via screenshot on /product.php?slug=microsoft-office-2024-professional-plus-windows: intro + 4 bullets + closing line render cleanly. php -l passes.
 - Earlier in this fork (handoff): native self-hosted install guides (install-guide.php + includes/install-guides.php + uploads/guides/), Download/Install/Activate buttons on product/order-success/order-history pages, Mac Office guide screenshots fixed, order-success "Download now" CSS bug fixed, AI generator wired to Emergent LLM key, seed-descriptions.php run for all 37 products.
+
+
+## 2026-06-28 — Description teasers on listing cards/rows (shop, category, index, brand, hub)
+- New product_teaser($description, $maxLen=150) helper in includes/functions.php: extracts the first non-bullet sentence from the stored AI description, flattens + clamps to ~150 chars on a word boundary, returns '' when empty.
+- render_product_card() + render_product_row() now emit the teaser (data-testid card-teaser-<slug> / row-teaser-<slug>): card teaser sits under the title above the stock pill; row teaser sits under the name/rating. CSS .pc-teaser/.shop-row-teaser (style.css end) clamp to 2 lines via -webkit-line-clamp so card heights stay uniform.
+- Added description to the explicit SELECT column lists in brand.php and hub.php (shop.php/category.php/index.php already use SELECT *). style.min.css auto-regenerates from style.css mtime.
+- Verified via screenshots: grid (shop.php) and list (shop.php?view=list) both render the 2-line teaser cleanly. Benefit: more crawlable on-listing text + product-page CTR lift.

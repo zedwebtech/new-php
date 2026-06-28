@@ -62,7 +62,7 @@ if ($topic['categories']) {
     try {
         $place = implode(',', array_fill(0, count($topic['categories']), '?'));
         $stP = $pdo->prepare(
-            "SELECT id, name, slug, image, price, original_price, rating, reviews, platform, category
+            "SELECT id, name, slug, image, price, original_price, rating, reviews, platform, category, description
                FROM products
               WHERE category IN ($place)
            ORDER BY (rating * reviews) DESC, price ASC

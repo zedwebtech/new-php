@@ -2091,9 +2091,42 @@ function render_stars(float $rating): string
 }
 
 // Wide horizontal product banner row — shared by shop list view and category pages
+/**
+ * Build a short, single-line teaser from the AI product description for use on
+ * listing cards/rows.  Uses the first non-bullet sentence (the intro line the
+ * generator writes), flattened + clamped to ~150 chars on a word boundary.
+ * Returns '' when no description exists so the markup stays clean.
+ */
+function product_teaser(string $description, int $maxLen = 150): string
+{
+    $description = trim($description);
+    if ($description === '') return '';
+    $teaser = '';
+    foreach (preg_split('/\r\n|\r|\n/', $description) as $line) {
+        $line = trim($line);
+        if ($line === '') continue;
+        if (preg_match('/^([•▪◦\-\*])\s+/u', $line)) continue;
+        $teaser = $line;
+        break;
+    }
+    if ($teaser === '') {
+        $teaser = trim(preg_replace('/\s+/u', ' ', preg_replace('/^([•▪◦\-\*])\s+/mu', '', $description)));
+    }
+    if (mb_strlen($teaser) > $maxLen) {
+        $teaser = mb_substr($teaser, 0, $maxLen);
+        $teaser = preg_replace('/\s+\S*$/u', '', $teaser);
+        $teaser = rtrim($teaser, " \t.,;:") . '…';
+    }
+    return $teaser;
+}
+
 function render_product_row(array $p): string
 {
     $curCode = current_currency()['code'];
+    $teaser = product_teaser((string)($p['description'] ?? ''));
+    $teaserHtml = $teaser !== ''
+        ? '<p class="shop-row-teaser small text-secondary mb-1" data-testid="row-teaser-' . esc($p['slug']) . '">' . esc($teaser) . '</p>'
+        : '';
     $pct = ($p['original_price'] && $p['original_price'] > $p['price'])
         ? round((1 - $p['price'] / $p['original_price']) * 100) : 0;
     $orig = $pct ? '<small class="text-secondary text-decoration-line-through d-block">' . format_price((float)$p['original_price']) . '</small>' : '';
@@ -2116,6 +2149,7 @@ function render_product_row(array $p): string
           </div>
           <a href="product.php?slug=' . esc($p['slug']) . '" class="text-decoration-none text-body fw-bold fs-6 d-block">' . esc($p['name']) . '</a>
           ' . render_product_rating($p['slug'], 'row') . '
+          ' . $teaserHtml . '
           <div class="d-flex flex-wrap gap-3 small text-secondary">
             <span><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Instant email delivery</span>
             <span><i class="bi bi-infinity text-primary me-1"></i>One-time purchase</span>
@@ -2140,6 +2174,10 @@ function render_product_row(array $p): string
 function render_product_card(array $p): string
 {
     $curCode = current_currency()['code'];
+    $teaser = product_teaser((string)($p['description'] ?? ''));
+    $teaserHtml = $teaser !== ''
+        ? '<p class="pc-teaser small text-secondary mb-2" data-testid="card-teaser-' . esc($p['slug']) . '">' . esc($teaser) . '</p>'
+        : '';
     $pct = ($p['original_price'] && $p['original_price'] > $p['price'])
         ? round((1 - $p['price'] / $p['original_price']) * 100) : 0;
     $discount = $pct ? '<span class="badge text-bg-danger position-absolute top-0 end-0 m-2">-' . $pct . '%</span>' : '';
@@ -2163,6 +2201,7 @@ function render_product_card(array $p): string
           ' . render_product_rating($p['slug'], 'card') . '
         </div>
         <a href="product.php?slug=' . esc($p['slug']) . '" class="text-decoration-none text-body fw-semibold product-title mb-1">' . esc($p['name']) . '</a>
+        ' . $teaserHtml . '
         <div class="mb-2">' . $stockPill . '</div>
         <small class="text-secondary pc-meta mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Instant email delivery · One-time purchase</small>
         <div class="pc-price-row d-flex align-items-center justify-content-between gap-2 mt-auto pt-2">

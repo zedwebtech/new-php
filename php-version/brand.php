@@ -41,7 +41,7 @@ if (!in_array($active, ['products','articles','reviews'], true)) $active = 'prod
 // Products for this brand.
 $products = [];
 try {
-    $stmt = db()->prepare("SELECT id, slug, name, brand, category, version, price, image, rating, reviews
+    $stmt = db()->prepare("SELECT id, slug, name, brand, category, version, price, image, rating, reviews, description
                              FROM products WHERE brand = ? AND is_active = 1
                              ORDER BY rating DESC, reviews DESC");
     $stmt->execute([$brandLabel]);

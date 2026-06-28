@@ -4572,3 +4572,18 @@ body:not(.adm) footer .h2 { font-size: 1.4rem !important; font-weight: 600 !impo
   border: 1px solid rgba(147, 197, 253, .35);
 }
 
+
+/* ── Listing-card description teasers (2026-06-28) ───────────────────────
+   A 2-line AI-description snippet on shop/category cards + rows. Clamped to
+   2 lines so card heights stay uniform; adds crawlable on-listing text +
+   lifts product-page CTR. */
+.pc-teaser,
+.shop-row-teaser {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  margin-bottom: .5rem;
+}
+.shop-row-teaser { max-width: 60ch; }
