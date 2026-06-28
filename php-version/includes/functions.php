@@ -2204,8 +2204,10 @@ function render_product_card(array $p): string
         ' . $teaserHtml . '
         <div class="mb-2">' . $stockPill . '</div>
         <small class="text-secondary pc-meta mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Instant email delivery · One-time purchase</small>
-        <div class="pc-price-row d-flex align-items-center justify-content-between gap-2 mt-auto pt-2">
+        <div class="pc-price-row d-flex align-items-baseline gap-2 mt-auto pt-2">
           <div class="lh-1 d-flex align-items-baseline gap-2"><span class="fw-bold text-primary fs-5">' . format_price((float)$p['price']) . '</span>' . $orig . '<span class="text-secondary" style="font-size:.6rem;font-weight:600;letter-spacing:.04em;" data-testid="card-currency-' . esc($p['slug']) . '">' . esc($curCode) . '</span></div>
+        </div>
+        <div class="pc-btn-row d-flex gap-2 pt-2">
           ' . $cartBtn . '
         </div>
       </div>

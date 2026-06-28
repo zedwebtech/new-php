@@ -2006,6 +2006,17 @@ body.has-deal-bar #chat-panel { bottom: 72px; }
   .pc-btn .pc-btn-label { display: none; }
 }
 
+/* Product-card action row — Add + Buy on their own full-width row, split
+   50/50 so neither button is ever clipped by the card (incl. the wider
+   "Added" state). (2026-06-28) */
+.pc-btn-row { width: 100%; }
+.pc-btn-row .pc-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
 /* Product detail page — orange-outlined Buy Now to match screenshot */
 .btn-orange-solid   { background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; border: 1.5px solid transparent; box-shadow: 0 6px 16px rgba(234,88,12,.32); }
 .btn-orange-solid:hover, .btn-orange-solid:focus { background: linear-gradient(135deg, #fb923c, #f97316); color: #fff; box-shadow: 0 10px 24px rgba(234,88,12,.42); transform: translateY(-1px); }
@@ -3622,6 +3633,29 @@ body:not(.adm) .add-to-cart-btn.added:hover {
   background-image: none !important;
   background-color: #0848CC !important;
   border-color: #0848CC !important;
+}
+
+/* Product-card "Added" state — calm green success pill (not another blue)
+   so it reads as a clear confirmation beside the blue "Buy" button. The
+   action buttons sit on their own full-width 50/50 row, so nothing clips. */
+body:not(.adm) .pc-btn-cart.added,
+body:not(.adm) .pc-btn-cart.added:hover,
+body:not(.adm) .pc-btn-cart.added:focus {
+  background-image: none !important;
+  background-color: #ecfdf5 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+  box-shadow: none !important;
+}
+body:not(.adm) .pc-btn-cart.added:hover {
+  background-color: #d1fae5 !important;
+  border-color: #4ade80 !important;
+  color: #166534 !important;
+}
+[data-bs-theme="dark"] body:not(.adm) .pc-btn-cart.added {
+  background-color: rgba(34,197,94,.14) !important;
+  color: #86efac !important;
+  border-color: rgba(34,197,94,.42) !important;
 }
 
 /* "Buy Now" secondary pill — soft blue tint with Zoom outline */
