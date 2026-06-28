@@ -1125,3 +1125,10 @@ The store already had extensive, valid JSON-LD (Organization, LocalBusiness, Web
 - header.php now serves assets/css/style.min.css (216KB→159KB). Verified product page at mobile viewport: layout intact, CLS=0.
 - Core layout CSS (bootstrap.min.css + style.css) kept SYNCHRONOUS by design — deferring previously caused CLS 0.411 (documented). Icon font CSS also kept sync for same reason. So render-blocking improves but won't be zero; CLS stays 0.
 - Tracker deferral (prior task) also improves mobile TBT/unused-JS/main-thread on next crawl. JS already deferred (bootstrap.bundle + main.js). Deploy to reflect in PSI.
+
+
+## 2026-06-28 — AI product descriptions now displayed on product page (P0 from fork)
+- Context: AI generator was fixed earlier and all 37 products have descriptions seeded in products.description (intro paragraph + "•" bullets + closing line), but they were only used for <meta description>, never shown in the visible UI.
+- Fix (product.php, "Description" tab #tab-desc ~line 615): replaced the generic hardcoded paragraph with a small inline renderer that parses the stored description — "•/▪/◦/-/*" lines grouped into a styled <ul>, other non-empty lines become <p>. Wrapped in data-testid="product-description". Falls back to the old generic blurb only when description is empty. The existing feature bullets (licensed/full version/free updates) + GTIN/SKU/Brand identifier strip remain below it.
+- Verified via screenshot on /product.php?slug=microsoft-office-2024-professional-plus-windows: intro + 4 bullets + closing line render cleanly. php -l passes.
+- Earlier in this fork (handoff): native self-hosted install guides (install-guide.php + includes/install-guides.php + uploads/guides/), Download/Install/Activate buttons on product/order-success/order-history pages, Mac Office guide screenshots fixed, order-success "Download now" CSS bug fixed, AI generator wired to Emergent LLM key, seed-descriptions.php run for all 37 products.

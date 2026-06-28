@@ -613,7 +613,37 @@ include __DIR__ . '/includes/header.php';
   </ul>
   <div class="tab-content border border-top-0 rounded-bottom p-4">
     <div class="tab-pane fade show active" id="tab-desc">
-      <p><?= esc($product['name']) ?> is a genuine, one-time-purchase product. One-time purchase — no subscription, no recurring fees. Your license key activates the official software downloaded directly from Microsoft (or the vendor) and remains yours for as long as you use it.</p>
+      <?php
+        /* Render the AI-generated product description (intro paragraph(s) +
+           "•" bullet list + closing line). Bullet lines are grouped into a
+           styled <ul>; everything else becomes a paragraph. Falls back to a
+           generic blurb if no description has been generated yet. */
+        $descText = trim((string)($product['description'] ?? ''));
+      ?>
+      <?php if ($descText !== ''): ?>
+        <div data-testid="product-description">
+          <?php
+            $lines  = preg_split('/\r\n|\r|\n/', $descText);
+            $inList = false;
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if ($line === '') { continue; }
+                $isBullet = (bool)preg_match('/^([•▪◦\-\*])\s+/u', $line);
+                if ($isBullet) {
+                    if (!$inList) { echo '<ul class="mb-3">'; $inList = true; }
+                    $item = preg_replace('/^([•▪◦\-\*])\s+/u', '', $line);
+                    echo '<li class="mb-1">' . esc($item) . '</li>';
+                } else {
+                    if ($inList) { echo '</ul>'; $inList = false; }
+                    echo '<p class="mb-3">' . esc($line) . '</p>';
+                }
+            }
+            if ($inList) { echo '</ul>'; }
+          ?>
+        </div>
+      <?php else: ?>
+        <p><?= esc($product['name']) ?> is a genuine, one-time-purchase product. One-time purchase — no subscription, no recurring fees. Your license key activates the official software downloaded directly from Microsoft (or the vendor) and remains yours for as long as you use it.</p>
+      <?php endif; ?>
       <ul class="small text-secondary">
         <li>Licensed for 1 <?= esc($product['platform']) ?> device</li>
         <li>Full official version — not a trial or shared account</li>
