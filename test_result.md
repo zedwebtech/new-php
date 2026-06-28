@@ -383,3 +383,17 @@ agent_communication:
       3) Renamed the order-success product-card installer button label to "Download now" per request.
       Screenshot confirms all three buttons render on order-success (Sign in to activate / View installation guide / Download now).
       NOTE: the live deployed site needs this code deployed (Save to GitHub -> deploy); the fallback means no DB seed is required for buttons to appear.
+
+    -agent: "main"
+    -message: |
+      MAC OFFICE GUIDE rebuilt to be accurate (user: "make it according to Mac installation, get real stuff online").
+      - Discovered the old Mac screenshots (i1-i13) were actually a Windows-style web-portal flow (mentioned Start Menu),
+        which is why the Mac guide was wrong. Removed them.
+      - Sourced the OFFICIAL macOS Office installer screenshots from Microsoft's support CDN and re-hosted them at
+        /uploads/guides/mac/ (mac-portal-install, mac-dock-pkg, mac-continue, mac-password, mac-success, mac-word-icon,
+        mac-getstarted). All serve HTTP 200, naturalWidth>0.
+      - Rewrote office_mac template per the real Microsoft flow: Redeem key at setup.office.com -> download .pkg from
+        account.microsoft.com -> open installer (.pkg) -> Continue/Agree/Install -> enter Mac password -> success ->
+        open Word from Launchpad -> Get Started / Sign in to activate. 8 steps, proper Mac flowchart, uninstall-old-Office tip.
+      - Verified: Mac guide renders 8 steps with 7 real macOS screenshots; hero shows Activate/Sign in + Back, NO one-click
+        Download button (Mac downloads after sign-in). Screenshot confirms authentic macOS installer password + success screens.
