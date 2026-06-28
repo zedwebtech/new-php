@@ -182,6 +182,7 @@ if ($schemaDescription === '') {
 $jsonLd = [
     '@context'    => 'https://schema.org',
     '@type'       => 'Product',
+    '@id'         => site_url() . '/product.php?slug=' . $product['slug'] . '#product',
     'name'        => $product['name'],
     'image'       => [$schemaImage],
     'description' => $schemaDescription,

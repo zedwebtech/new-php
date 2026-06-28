@@ -822,19 +822,11 @@ function product_ai_summary_jsonld(array $p): array
         'dateModified'  => date('Y-m-d'),
         'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $url],
         'inLanguage'    => 'en',
-        'about'         => [
-            '@type'    => 'Product',
-            'name'     => $name,
-            'brand'    => ['@type' => 'Brand', 'name' => $brand],
-            'category' => (string)($p['category'] ?? 'Software'),
-            'offers'   => [
-                '@type'         => 'Offer',
-                'price'         => (string)(float)$p['price'],
-                'priceCurrency' => 'USD',
-                'availability'  => 'https://schema.org/InStock',
-                'url'           => $url,
-            ],
-        ],
+        // Reference the single complete Product node (defined in product.php) by
+        // @id instead of duplicating a partial Product+Offer here. A second,
+        // incomplete Product-with-offers on the same URL is read by Google as an
+        // invalid Merchant listing ("Missing field image/description/shipping").
+        'about'         => ['@id' => $url . '#product'],
         'audience'      => [
             '@type' => 'Audience',
             'audienceType' => 'Home users, small-business owners and IT teams looking for a one-time-purchase ' . $platform . ' licence',

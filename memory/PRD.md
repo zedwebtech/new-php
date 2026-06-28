@@ -1105,3 +1105,9 @@ The store already had extensive, valid JSON-LD (Organization, LocalBusiness, Web
 - DB hygiene: cleared 36 synthetic GTINs (UPDATE products SET gtin=NULL WHERE not valid). 0 non-null GTINs remain (Excel test value also nulled — software keys have no real GTIN).
 - GSC "Missing field aggregateRating" + "Missing field review" (Product snippets) are NON-CRITICAL optional-enhancement notices, NOT errors — page is valid/eligible. They only clear when the product has REAL published reviews (schema already auto-includes them via product_review_stats/product_reviews). Refused to inject fake reviews (Google manual-action/ban risk). User has 1 pending review to approve.
 - seed-gtins.php still mints "200…" GTINs but ALL output paths (product.php schema, merchant-feed.php, on-page GTIN line) now gate via is_valid_global_gtin(), so they can never surface to Google again.
+
+## 2026-06 — GSC Merchant listings "Missing field image" (critical) — ROOT CAUSE found
+- NOT stale: every product page emitted a SECOND, incomplete Product via the Article schema's `about` (in includes/seo-content.php) — a Product with an `offers` block but no image/description/shipping/returns. Google read this partial merchant item and marked the URL invalid ("Missing field image", and the earlier shipping/returns/description warnings too).
+- Fix: added '@id' to the single complete Product in product.php (site_url()/product.php?slug=...#product); changed Article.about in seo-content.php to a pure reference ['@id'=>$url.'#product'] instead of duplicating a partial Product+Offer.
+- Verified: product pages now render exactly ONE Product entity (with image+offers+description+sku); Article.about is an @id ref. Product image file resolves (200). Applies site-wide to all products.
+- Deploy to maventechsoftware.com + Validate Fix in GSC to clear.
