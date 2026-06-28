@@ -180,6 +180,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'update_product') {
+        // GTIN guard — persist only a GLOBALLY valid GTIN. The synthetic "200…"
+        // GS1 in-store range passes the check digit but is NOT globally unique,
+        // which Google flags as "Not a globally valid GTIN". Drop anything that
+        // fails validation so it can never reach the Product schema / feed.
+        $gtinIn       = trim((string)($_POST['gtin'] ?? ''));
+        $gtinClean    = ($gtinIn !== '' && is_valid_global_gtin($gtinIn)) ? preg_replace('/\D+/', '', $gtinIn) : null;
+        $gtinRejected = ($gtinIn !== '' && $gtinClean === null);
         $categorySlug = ensure_category((string)($_POST['category'] ?? ''));
         // Activation / Install URL modes — toggle from the AI switch in the form.
         // When mode=ai, the typed value is still saved (it holds the current
@@ -198,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE products SET name=?, sku=?, gtin=?, brand=?, year=?, platform=?, category=?, license_type=?,
             price=?, original_price=?, sale_starts_at=?, sale_ends_at=?, badge=?, description=?, is_active=?, activation_url=?, install_guide_url=?, installer_url=?, activation_url_mode=?, install_url_mode=?, image=COALESCE(NULLIF(?,""),image) WHERE slug=?')
             ->execute([
-                trim($_POST['name']), trim($_POST['sku']), trim($_POST['gtin'] ?? '') ?: null, trim($_POST['brand']) ?: null,
+                trim($_POST['name']), trim($_POST['sku']), $gtinClean, trim($_POST['brand']) ?: null,
                 $_POST['year']!==''?(int)$_POST['year']:null, $_POST['platform'], $categorySlug,
                 $_POST['license_type'], (float)$_POST['price'],
                 $_POST['original_price']!==''?(float)$_POST['original_price']:null,
@@ -245,9 +252,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $saveMsg = isset($priceChanged) && $priceChanged
             ? 'Saved+%E2%80%94+price+change+pushed+to+Bing%2FYandex+Shopping+feeds'
             : 'Saved';
+        if (!empty($gtinRejected)) $saveMsg = 'Saved+%E2%80%94+GTIN+ignored+%28not+a+globally+valid+barcode%29';
         header('Location: admin.php?tab=products&edit='.urlencode($_POST['slug']).'&msg=' . $saveMsg); exit;
 
     } elseif ($action === 'add_product') {
+        // GTIN guard — only store a globally valid GTIN (reject synthetic "200…").
+        $gtinIn    = trim((string)($_POST['gtin'] ?? ''));
+        $gtinClean = ($gtinIn !== '' && is_valid_global_gtin($gtinIn)) ? preg_replace('/\D+/', '', $gtinIn) : null;
         $categorySlug = ensure_category((string)($_POST['category'] ?? ''));
         // Persist the parent-group + nav-heading the admin picked in the
         // inline "+ Add" flow.  `ensure_category()` above has already
@@ -277,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $actMode = 'manual'; // AI auto-fill removed — URLs are entered manually
         $insMode = 'manual';
         $pdo->prepare('INSERT INTO products (slug,name,sku,gtin,brand,year,platform,category,license_type,price,original_price,badge,description,image,is_active,activation_url,install_guide_url,installer_url,activation_url_mode,install_url_mode,region,apps,rating,reviews) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,4.5,0)')
-            ->execute([$slug, trim($_POST['name']), trim($_POST['sku']) ?: 'SKU-'.strtoupper(substr(md5($slug),0,8)), trim($_POST['gtin'] ?? '') ?: null, trim($_POST['brand']) ?: null,
+            ->execute([$slug, trim($_POST['name']), trim($_POST['sku']) ?: 'SKU-'.strtoupper(substr(md5($slug),0,8)), $gtinClean, trim($_POST['brand']) ?: null,
                 $_POST['year']!==''?(int)$_POST['year']:null, $_POST['platform'], $categorySlug, $_POST['license_type'],
                 (float)$_POST['price'], $_POST['original_price']!==''?(float)$_POST['original_price']:null,
                 trim($_POST['badge']) ?: null, trim($_POST['description'] ?? '') ?: null, trim($_POST['image'] ?? '') ?: null,
@@ -7868,7 +7879,7 @@ elseif ($tab === 'products'):
                 <div class="row g-2 mb-3">
                   <div class="col-12"><label class="form-label small mb-0">Product Name *</label><input class="form-control form-control-sm" id="f_name" name="name" required value="<?= esc($editing['name']) ?>"></div>
                   <div class="col-4"><label class="form-label small mb-0">SKU / Product ID</label><input class="form-control form-control-sm" id="f_sku" name="sku" value="<?= esc($editing['sku']) ?>"></div>
-                  <div class="col-4"><label class="form-label small mb-0">GTIN <span class="text-muted" style="font-size:10px;">(UPC/EAN/ISBN)</span></label><input class="form-control form-control-sm" id="f_gtin" name="gtin" placeholder="e.g. 0885370920130" value="<?= esc($editing['gtin'] ?? '') ?>"></div>
+                  <div class="col-4"><label class="form-label small mb-0">GTIN <span class="text-muted" style="font-size:10px;">(UPC/EAN/ISBN)</span></label><input class="form-control form-control-sm" id="f_gtin" name="gtin" placeholder="e.g. 0885370920130" value="<?= esc($editing['gtin'] ?? '') ?>" inputmode="numeric"><div class="form-text" style="font-size:10px;">Optional. Must be a <strong>real, globally valid</strong> barcode (8/12/13/14 digits). Leave blank for software keys — invalid or in-store "2…" codes are auto-rejected to avoid Google's "Not a globally valid GTIN".</div></div>
                   <div class="col-4"><label class="form-label small mb-0">Brand</label><input class="form-control form-control-sm" name="brand" value="<?= esc($editing['brand'] ?? '') ?>"></div>
                   <div class="col-4"><label class="form-label small mb-0">Year</label><input class="form-control form-control-sm" name="year" type="number" value="<?= esc($editing['year']) ?>"></div>
                   <div class="col-4"><label class="form-label small mb-0">OS / Platform</label>

@@ -1099,3 +1099,9 @@ The store already had extensive, valid JSON-LD (Organization, LocalBusiness, Web
 - merchant-feed.php: <g:gtin> emitted only when globally valid; identifier_exists falls back to brand+MPN.
 - The other 3 errors (hasMerchantReturnPolicy, shippingDetails, description) were already in current code — STALE from old production crawl; clear on deploy. Verified main Product JSON-LD on preview: description present, no gtin keys, shippingDetails(6), hasMerchantReturnPolicy present, price 119.99 USD. Merchant feed: 0 restricted GTINs.
 - ENV: pod reset AGAIN this session (3rd time) — reinstalled PHP8.2 + MariaDB + reseed; .env (EMERGENT_LLM_KEY) persisted in /app. Deploy to maventechsoftware.com to clear GSC.
+
+## 2026-06 — GTIN admin guard + DB cleanup; review/aggregateRating warnings explained
+- admin.php update_product & add_product: added GTIN guard using is_valid_global_gtin() — invalid/synthetic "200…" GTINs are dropped (saved NULL) with a flash notice "GTIN ignored (not a globally valid barcode)". Edit Product GTIN field now shows inline guidance (numeric, real barcode only). Verified via curl: invalid→NULL, valid 0885370920130→saved.
+- DB hygiene: cleared 36 synthetic GTINs (UPDATE products SET gtin=NULL WHERE not valid). 0 non-null GTINs remain (Excel test value also nulled — software keys have no real GTIN).
+- GSC "Missing field aggregateRating" + "Missing field review" (Product snippets) are NON-CRITICAL optional-enhancement notices, NOT errors — page is valid/eligible. They only clear when the product has REAL published reviews (schema already auto-includes them via product_review_stats/product_reviews). Refused to inject fake reviews (Google manual-action/ban risk). User has 1 pending review to approve.
+- seed-gtins.php still mints "200…" GTINs but ALL output paths (product.php schema, merchant-feed.php, on-page GTIN line) now gate via is_valid_global_gtin(), so they can never surface to Google again.
