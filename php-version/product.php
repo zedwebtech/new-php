@@ -743,18 +743,23 @@ include __DIR__ . '/includes/header.php';
           else                                       $_aggStars .= '<i class="bi bi-star"></i>';
       }
     ?>
+  <?php endif; ?>
     <section class="mt-5 pt-3" data-testid="product-reviews-section" id="reviews">
       <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
         <h2 class="h4 fw-bold mb-0">What customers are saying</h2>
-        <span class="text-warning lh-1 fs-5" aria-hidden="true"><?= $_aggStars ?></span>
-        <span class="fw-semibold"><?= number_format($_reviewStats['avg'], 1) ?></span>
-        <span class="text-secondary small">
-          Based on <?= (int)$_reviewStats['count'] ?> verified review<?= $_reviewStats['count'] === 1 ? '' : 's' ?>
-        </span>
-        <a href="reviews.php?product=<?= urlencode($product['slug']) ?>"
-           class="ms-auto small text-decoration-none"
-           data-testid="product-reviews-see-all">See all <?= (int)$_reviewStats['count'] ?> &rsaquo;</a>
+        <?php if ($_reviewStats['count'] > 0 && $_reviewRows): ?>
+          <span class="text-warning lh-1 fs-5" aria-hidden="true"><?= $_aggStars ?></span>
+          <span class="fw-semibold"><?= number_format($_reviewStats['avg'], 1) ?></span>
+          <span class="text-secondary small">
+            Based on <?= (int)$_reviewStats['count'] ?> verified review<?= $_reviewStats['count'] === 1 ? '' : 's' ?>
+          </span>
+          <a href="reviews.php?product=<?= urlencode($product['slug']) ?>"
+             class="small text-decoration-none"
+             data-testid="product-reviews-see-all">See all <?= (int)$_reviewStats['count'] ?> &rsaquo;</a>
+        <?php endif; ?>
+        <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold ms-auto" data-bs-toggle="modal" data-bs-target="#writeReviewModal" data-testid="write-review-btn"><i class="bi bi-pencil-square me-2"></i>Write a review</button>
       </div>
+      <?php if ($_reviewStats['count'] > 0 && $_reviewRows): ?>
       <div class="row g-3">
         <?php foreach ($_reviewRows as $r): ?>
           <div class="col-md-6">
@@ -781,8 +786,107 @@ include __DIR__ . '/includes/header.php';
           </div>
         <?php endforeach; ?>
       </div>
+      <?php else: ?>
+      <div class="card border-0 bg-body-tertiary rounded-4 p-4 text-center" data-testid="reviews-empty">
+        <i class="bi bi-chat-quote fs-2 text-primary mb-2"></i>
+        <p class="mb-1 fw-semibold">No reviews yet — be the first to review <?= esc($product['name']) ?>!</p>
+        <p class="text-secondary small mb-0">Already bought it? Share your experience to help other shoppers decide.</p>
+      </div>
+      <?php endif; ?>
     </section>
-  <?php endif; ?>
+
+    <!-- Write-a-review modal — verified-purchase gated (order # + email) so
+         only genuine buyers can review.  3★+ auto-publishes; <3★ goes to the
+         admin for follow-up.  Reuses /ajax/product-review.php. -->
+    <div class="modal fade" id="writeReviewModal" tabindex="-1" aria-hidden="true" data-testid="write-review-modal">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold">Review <?= esc($product['name']) ?></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="pdReviewForm" data-slug="<?= esc($product['slug']) ?>">
+              <div class="text-center mb-2">
+                <div class="d-inline-flex gap-2" id="pdReviewStars" data-testid="pd-review-stars">
+                  <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <i class="bi bi-star pd-star" data-val="<?= $i ?>" data-testid="pd-star-<?= $i ?>" role="button" tabindex="0" style="font-size:34px;color:#e5e7eb;cursor:pointer;transition:color .12s,transform .12s;"></i>
+                  <?php endfor; ?>
+                </div>
+                <input type="hidden" name="rating" id="pdReviewRating" value="0">
+                <div class="small text-secondary mt-1" id="pdReviewLabel">Tap a star to rate</div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold mb-1">Your review</label>
+                <textarea class="form-control rounded-3" name="comment" id="pdReviewComment" rows="3" maxlength="800" placeholder="What did you like? How was delivery &amp; activation?" data-testid="pd-review-comment"></textarea>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold mb-1">Order number</label>
+                  <input type="text" class="form-control rounded-3" name="order_number" placeholder="e.g. MV2406ABCDE" data-testid="pd-review-order">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold mb-1">Email used at checkout</label>
+                  <input type="email" class="form-control rounded-3" name="email" placeholder="you@email.com" data-testid="pd-review-email">
+                </div>
+              </div>
+              <p class="text-secondary" style="font-size:11.5px;">We verify your purchase before publishing — reviews are only shown for genuine orders. Find your order number in your confirmation email or via <a href="track-order.php">Track Order</a>.</p>
+              <div id="pdReviewMsg" class="small mb-2" style="display:none;"></div>
+              <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-semibold" data-testid="pd-review-submit"><i class="bi bi-send me-1"></i>Submit review</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+    (function(){
+      var form = document.getElementById('pdReviewForm');
+      if (!form) return;
+      var stars  = form.querySelectorAll('.pd-star');
+      var rInput = document.getElementById('pdReviewRating');
+      var label  = document.getElementById('pdReviewLabel');
+      var msg    = document.getElementById('pdReviewMsg');
+      var LBL = {0:'Tap a star to rate',1:'Poor',2:'Fair',3:'Good',4:'Great',5:'Excellent'};
+      function paint(n){ stars.forEach(function(s){ var v=+s.dataset.val; s.style.color = v<=n ? '#facc15' : '#e5e7eb'; s.className = 'bi pd-star ' + (v<=n?'bi-star-fill':'bi-star'); }); label.textContent = LBL[n]||LBL[0]; }
+      function setR(n){ rInput.value=n; paint(n); }
+      stars.forEach(function(s){ var v=+s.dataset.val;
+        s.addEventListener('mouseenter', function(){ paint(v); });
+        s.addEventListener('click', function(){ setR(v); });
+        s.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setR(v);} });
+      });
+      document.getElementById('pdReviewStars').addEventListener('mouseleave', function(){ paint(+rInput.value||0); });
+      form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        msg.style.display='none';
+        var btn = form.querySelector('[data-testid="pd-review-submit"]');
+        var payload = {
+          product_slug: form.dataset.slug,
+          rating: +rInput.value || 0,
+          comment: form.comment.value.trim(),
+          order_number: form.order_number.value.trim(),
+          email: form.email.value.trim()
+        };
+        btn.disabled = true; var old = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting…';
+        try {
+          var res = await fetch('ajax/product-review.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          var data = await res.json();
+          msg.style.display='block';
+          if (data.ok) {
+            msg.className='small mb-2 text-success fw-semibold';
+            msg.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>' + (data.message || 'Thank you for your review!');
+            form.querySelector('textarea').value=''; setR(0);
+            if (data.published) { setTimeout(function(){ window.location.reload(); }, 1400); }
+          } else {
+            msg.className='small mb-2 text-danger';
+            msg.textContent = data.error || 'Something went wrong. Please try again.';
+          }
+        } catch(err) {
+          msg.style.display='block'; msg.className='small mb-2 text-danger'; msg.textContent='Network error. Please try again.';
+        } finally { btn.disabled=false; btn.innerHTML=old; }
+      });
+    })();
+    </script>
+  <?php /* end reviews + write-a-review */ ?>
 
   <!-- Ask AI — Claude Haiku 4.5 powered Q&A grounded on this product's
        facts, FAQs, and recent reviews.  Answers free-form questions in
