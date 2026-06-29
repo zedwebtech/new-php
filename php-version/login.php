@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/regions.php';
 ensure_admin();
 $pageTitle = 'Admin Login | ' . SITE_BRAND;
+$pageDescription = 'Sign in to your Maventech Software account to view orders, license keys, downloads and order history. Secure customer & admin login.';
 // Default to EMPTY so a normal login uses the role-aware landing
 // (admin → dashboard, staff → first allowed panel, customer → account).
 // A real ?next= (e.g. from require_admin) still takes precedence.
@@ -59,6 +60,7 @@ $brandLogo = $co['logo']  ?? '';
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= esc($pageTitle) ?></title>
+<meta name="description" content="<?= esc($pageDescription) ?>">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#06b6d4">
 <link rel="icon" href="/assets/images/icons/admin-192.png">

@@ -33,6 +33,11 @@ $TOPICS = topic_hubs_all(true);
 
 $topicSlug = strtolower(trim((string)($_GET['topic'] ?? '')));
 $topic = $TOPICS[$topicSlug] ?? null;
+/* Hubs render at the virtual clean URL /hub/<slug>, so the browser would
+   resolve every relative asset/link/AJAX call against /hub/ and 404. Emit a
+   <base href> pointing at the real (region-aware) site root to fix them all
+   in one place — assets, nav, footer, hub body links and the cart AJAX. */
+$baseHref = site_url() . country_prefix() . '/';
 if (!$topic) {
     http_response_code(404);
     $pageTitle = 'Topic Hub Not Found | ' . SITE_BRAND;
@@ -52,6 +57,11 @@ if (!$topic) {
 $pageTitle       = strip_tags($topic['title']) . ' (' . date('Y') . ') | ' . SITE_BRAND;
 $pageDescription = strip_tags($topic['headline']);
 $pageKeywords    = $topic['keywords'];
+/* Canonical must be the clean hub URL — NOT the default /hub.php the header
+   would otherwise build (which 404s with no ?topic and shows up in GSC as a
+   "broken canonical URL"). $canonicalPathBare also drives the hreflang set. */
+$canonicalPathBare = '/hub/' . $topicSlug;
+$canonicalUrl      = site_url() . country_prefix() . $canonicalPathBare;
 
 /* ---------- DATA AGGREGATION ---------- */
 $pdo = db();

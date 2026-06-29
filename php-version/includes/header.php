@@ -99,6 +99,13 @@ echo $initialTheme !== '' ? ' data-bs-theme="' . esc($initialTheme) . '"' : '';
 ?>>
 <head>
   <meta charset="UTF-8">
+  <?php /* Pages served under a virtual sub-path (e.g. the topic hubs at
+           /hub/<slug>) must set $baseHref so the browser resolves every
+           relative URL — CSS/JS assets, nav links, AJAX — against the real
+           site root instead of /hub/. Without it those requests land at
+           /hub/assets/…, /hub/shop.php, … and 404 on production. Must come
+           BEFORE the first relative <link>/<script>. */
+        if (!empty($baseHref)): ?><base href="<?= esc($baseHref) ?>"><?php endif; ?>
   <script>
     /* Performance: defer ALL third-party tracking (GTM, gtag/GA4/Ads, Bing UET,
        Clarity) until the FIRST user interaction or ~3s after load — whichever

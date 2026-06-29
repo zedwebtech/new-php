@@ -239,6 +239,19 @@ if ($path === '/og-product.png' || $path === '/og-product.jpg') {
     return true;
 }
 
+if (preg_match('#^/hub/hub/(.+)$#', $path, $m)) {
+    // Legacy mis-resolved nested hub link → clean hub URL (301).
+    $qs = $_SERVER['QUERY_STRING'] ?? '';
+    header('Location: /hub/' . $m[1] . ($qs !== '' ? '?' . $qs : ''), true, 301);
+    return true;
+}
+if (preg_match('#^/hub/(?!assets/|ajax/|uploads/)(.+\.php)$#', $path, $m)) {
+    // Legacy /hub/<file>.php mis-resolved relative link → real root file (301).
+    $qs = $_SERVER['QUERY_STRING'] ?? '';
+    header('Location: /' . $m[1] . ($qs !== '' ? '?' . $qs : ''), true, 301);
+    return true;
+}
+
 if (preg_match('#^/hub/([a-z0-9\-]+)/?$#', $path, $m)) {
     // Topic Cluster Hub — /hub/microsoft-office → ?topic=microsoft-office
     $_GET['topic'] = $m[1];

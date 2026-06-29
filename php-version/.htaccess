@@ -57,6 +57,17 @@ RewriteRule ^microsoft-merchant-feed\.xml$     merchant-feed.php [L,QSA]
 RewriteRule ^press-kit/?$                        press-kit.php             [L,QSA]
 RewriteRule ^embed/badge(\.js)?$                 embed-badge.php           [L,QSA]
 RewriteRule ^embed/?$                            press-kit.php             [L,QSA]
+
+# ---- Clean up legacy /hub/* mis-resolved URLs.  Topic hubs render at the
+#      virtual path /hub/<slug>, so older crawls resolved the page's relative
+#      links against /hub/ and indexed bogus URLs like /hub/shop.php,
+#      /hub/category.php?slug=…, /hub/page.php?…, even /hub/hub/<slug>.
+#      301 them to their real root location so Google drops the 404s and
+#      consolidates link equity. (New page loads use <base href> and never
+#      generate these.)  Must precede the clean /hub/<slug> rule below. ----
+RewriteRule ^hub/hub/(.+)$                       /hub/$1                   [R=301,L,QSA]
+RewriteCond %{REQUEST_URI} !^/hub/(assets|ajax|uploads)/
+RewriteRule ^hub/(.+\.php)$                       /$1                       [R=301,L,QSA]
 RewriteRule ^hub/([a-z0-9\-]+)/?$                hub.php?topic=$1          [L,QSA]
 RewriteRule ^manifest(\.webmanifest|\.json)?$    manifest-webmanifest.php  [L,QSA]
 RewriteRule ^og-default\.(png|jpe?g)$            og-default.php            [L,QSA]
