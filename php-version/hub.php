@@ -40,14 +40,19 @@ $topic = $TOPICS[$topicSlug] ?? null;
 $baseHref = site_url() . country_prefix() . '/';
 if (!$topic) {
     http_response_code(404);
-    $pageTitle = 'Topic Hub Not Found | ' . SITE_BRAND;
+    // 404s must be noindex so Google never indexes them and never flags a
+    // "broken canonical". Point canonical at the (valid) region shop, not at
+    // this 404 URL, and link out with clean /hub/<slug> URLs.
+    $noIndex      = true;
+    $pageTitle    = 'Topic Hub Not Found | ' . SITE_BRAND;
+    $canonicalUrl = site_url() . country_prefix() . '/shop.php';
     include __DIR__ . '/includes/header.php';
     echo '<div class="container py-5 text-center">';
     echo '<h1 class="h3 fw-bold mb-3">Topic hub not found</h1>';
     echo '<p class="text-secondary">We don&rsquo;t have a hub for &ldquo;' . esc($topicSlug) . '&rdquo; yet.</p>';
     echo '<div class="d-flex gap-2 justify-content-center flex-wrap mt-4">';
     foreach ($TOPICS as $k => $t) {
-        echo '<a class="btn btn-outline-primary rounded-pill" href="hub.php?topic=' . esc($k) . '">' . strip_tags(esc($t['title'])) . '</a>';
+        echo '<a class="btn btn-outline-primary rounded-pill" href="hub/' . esc($k) . '">' . strip_tags(esc($t['title'])) . '</a>';
     }
     echo '</div></div>';
     include __DIR__ . '/includes/footer.php';
@@ -185,7 +190,7 @@ include __DIR__ . '/includes/header.php';
 
 <?= render_breadcrumb_nav([
     ['name' => 'Home',   'url' => 'index.php'],
-    ['name' => 'Topics', 'url' => 'hub.php?topic=' . urlencode($topicSlug)],
+    ['name' => 'Topics', 'url' => 'hub/' . rawurlencode($topicSlug)],
     ['name' => strip_tags($topic['title'])],
 ], 'hub-breadcrumb') ?>
 
@@ -359,7 +364,7 @@ include __DIR__ . '/includes/header.php';
   <div class="row g-3">
     <?php foreach ($TOPICS as $otherSlug => $other): if ($otherSlug === $topicSlug) continue; ?>
       <div class="col-md-4">
-        <a href="hub.php?topic=<?= esc($otherSlug) ?>" class="card text-decoration-none h-100" data-testid="hub-related-link" style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;transition:all .15s;"
+        <a href="hub/<?= esc($otherSlug) ?>" class="card text-decoration-none h-100" data-testid="hub-related-link" style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;transition:all .15s;"
            onmouseover="this.style.borderColor='<?= esc($other['color']) ?>';this.style.transform='translateY(-2px)'"
            onmouseout="this.style.borderColor='#e2e8f0';this.style.transform='none'">
           <div class="d-inline-block mb-2" style="background:<?= esc($other['color']) ?>;color:#fff;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.5px;">TOPIC HUB</div>
