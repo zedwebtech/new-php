@@ -341,6 +341,8 @@ if ($gcrMid !== '' && ctype_digit($gcrMid)):
 -->
 <script defer src="assets/vendor/bootstrap.bundle.min.js?v=<?= esc(@filemtime(__DIR__ . '/../assets/vendor/bootstrap.bundle.min.js')) ?>"></script>
 <script defer src="assets/js/main.js?v=<?= esc(@filemtime(__DIR__ . '/../assets/js/main.js')) ?>"></script>
+<!-- 3D scroll effects (reveal-on-scroll + subtle pointer tilt; reduced-motion aware) -->
+<script src="assets/js/scroll3d.js?v=<?= esc(@filemtime(__DIR__ . '/../assets/js/scroll3d.js')) ?>"></script>
 
 <!--
    Lazy-load + async-decode every image that's not already in the initial

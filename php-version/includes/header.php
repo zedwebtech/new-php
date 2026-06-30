@@ -591,6 +591,7 @@ echo $initialTheme !== '' ? ' data-bs-theme="' . esc($initialTheme) . '"' : '';
   ?>
   <link href="<?= 'assets/vendor/bootstrap-icons.min.css?v=' . esc(@filemtime(__DIR__ . '/../assets/vendor/bootstrap-icons.min.css')) ?>" rel="stylesheet">
   <link href="<?= esc(min_css_url(__DIR__ . '/../assets/css/style.css', 'assets/css/style.css')) ?>" rel="stylesheet">
+  <link href="assets/css/scroll3d.css?v=<?= esc(@filemtime(__DIR__ . '/../assets/css/scroll3d.css')) ?>" rel="stylesheet">
   <link rel="preload" as="style" href="<?= $darkCss ?>" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link href="<?= $darkCss ?>" rel="stylesheet"></noscript>
   <script>window.SITE_PHONE = '<?= esc($brandPhone) ?>'; window.CART_SLUGS = <?= json_encode(array_keys(cart())) ?>;</script>
