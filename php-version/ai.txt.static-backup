@@ -53,5 +53,5 @@ Training-Exclude: /admin.php /account.php /uploads/order-pdfs/ /order-history.ph
 
 # ----- Contact -----
 Contact: services@maventechsoftware.com
-Sitemap: https://office-activate.preview.emergentagent.com/sitemap.xml
-ProductFeed: https://office-activate.preview.emergentagent.com/merchant-feed.xml
+Sitemap: https://robot-rules.preview.emergentagent.com/sitemap.xml
+ProductFeed: https://robot-rules.preview.emergentagent.com/merchant-feed.xml

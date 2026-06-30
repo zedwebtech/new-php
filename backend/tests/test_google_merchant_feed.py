@@ -9,7 +9,7 @@ import pytest
 import requests
 import xml.etree.ElementTree as ET
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://office-activate.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://robot-rules.preview.emergentagent.com").rstrip("/")
 # Origin URL — bypass Cloudflare/preview-CF so Cache-Control is observed as Google would see in production
 ORIGIN_URL = "http://localhost:3000"
 PUBLIC_HOST = "show-live-7.preview.emergentagent.com"

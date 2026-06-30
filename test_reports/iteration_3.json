@@ -39,7 +39,7 @@
     "frontend": "n/a (curl-based simulation of Host=maventechsoftware.com is the documented way per the review request)"
   },
   "test_credentials": "admin@maventechsoftware.com / Admin@UC2026! — used for setup-check.php hygiene-card test.",
-  "seed_data_creation": "Restored the original 3 leaky rows in `settings` table at the end of the run so the main agent can reproduce the bug: main_url='https://office-activate.preview.emergentagent.com', site_domain_url='https://office-activate.preview.emergentagent.com', company_logo='https://office-activate.preview.emergentagent.com/uploads/company/logo-356b9f03.png'.",
+  "seed_data_creation": "Restored the original 3 leaky rows in `settings` table at the end of the run so the main agent can reproduce the bug: main_url='https://robot-rules.preview.emergentagent.com', site_domain_url='https://robot-rules.preview.emergentagent.com', company_logo='https://robot-rules.preview.emergentagent.com/uploads/company/logo-356b9f03.png'.",
   "retest_needed": true,
   "should_main_agent_self_test": true,
   "main_agent_can_self_test": true,
